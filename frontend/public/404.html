@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>gata prototype</title>
+    <script>
+      // GitHub Pages SPA fallback → hash router
+      const segment = 1
+      const parts = window.location.pathname.split('/')
+      const base = parts.slice(0, 1 + segment).join('/') || ''
+      window.location.replace(base + '/#' + window.location.pathname.replace(base, '') + window.location.search + window.location.hash)
+    </script>
+  </head>
+  <body>
+    <p>Loading…</p>
+  </body>
+</html>
