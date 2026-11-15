@@ -20,4 +20,4 @@ def validate_runtime_settings(cfg: Settings | None = None) -> None:
         msg = "JWT_ISSUER must be an http(s) URL"
         raise RuntimeError(msg)
     load_signing_keyset()
-    csrf_secret_bytes()
+    csrf_secret_bytes(active)

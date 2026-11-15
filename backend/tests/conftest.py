@@ -1,3 +1,8 @@
+import os
+
+# Tests must not rely on app code loading secrets from test fixture paths.
+os.environ.setdefault("CSRF_SECRET", "test-csrf-secret-do-not-use-in-production")
+
 from collections.abc import Generator
 from datetime import UTC, datetime
 
