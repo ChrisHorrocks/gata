@@ -8,6 +8,16 @@ All coding work in this repo uses the vendored **ponytail** skill at the **ultra
 
 ## Agent skills
 
+### Modern Web Guidance
+
+For HTML, CSS, and client-side JavaScript, use the vendored **modern-web-guidance** skill (installed via `npx modern-web-guidance@latest install` into `.agents/skills/`; Cursor also sees `.cursor/skills/modern-web-guidance`). Search and retrieve with `npx -y modern-web-guidance@latest` before inventing UI patterns. Details: `docs/agents/modern-web-guidance.md`; licenses live next to the skill.
+
+**Browser support (Modern Web Guidance):** Baseline **Widely available** (Safari is first-class; follow guide fallbacks when an API is not widely available).
+
+**Telemetry:** Set `DISABLE_TELEMETRY=1` whenever agents or developers run the modern-web-guidance CLI (local `.env`, CI, and Cloud Agent environments). The tool otherwise records anonymous install/retrieve/search telemetry.
+
+**Confirmations:** Use native `<dialog>` with `showModal()` for delete/remove/handover/version-conflict confirms — not shadcn/Radix Dialog. ADR: `docs/adr/0005-native-dialog-confirmations.md`.
+
 ### Issue tracker
 
 Issues and specs live in GitHub Issues on ChrisHorrocks/gata, managed with the gh CLI. See `docs/agents/issue-tracker.md`.
