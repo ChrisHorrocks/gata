@@ -2,9 +2,11 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { RequireAuth } from '@/components/RequireAuth'
 import { HealthScreen } from '@/screens/HealthScreen'
+import { CreateTripScreen } from '@/screens/CreateTripScreen'
 import { MagicLinkConfirmScreen } from '@/screens/MagicLinkConfirmScreen'
 import { MapScreen } from '@/screens/MapScreen'
 import { SignInScreen } from '@/screens/SignInScreen'
+import { TripSettingsScreen } from '@/screens/TripSettingsScreen'
 import { TripsScreen } from '@/screens/TripsScreen'
 
 export default function App() {
@@ -21,6 +23,22 @@ export default function App() {
           element={
             <RequireAuth>
               <TripsScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/trips/new"
+          element={
+            <RequireAuth>
+              <CreateTripScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/trips/:tripId/settings"
+          element={
+            <RequireAuth>
+              <TripSettingsScreen />
             </RequireAuth>
           }
         />
