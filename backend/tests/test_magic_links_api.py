@@ -10,12 +10,10 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from fastapi.testclient import TestClient
 from joserfc import jwt
-from joserfc.jwk import ECKey
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.auth.constants import (
-    MAGIC_TOKEN_AUD,
     MAGIC_TOKEN_TTL,
     MAGIC_TOKEN_TYP,
     SESSION_COOKIE_NAME,
