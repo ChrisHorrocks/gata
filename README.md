@@ -25,8 +25,10 @@ PMTiles extracts are large (~3.2 GB for Britain and Ireland) and are **never com
 
 ```bash
 ./scripts/tiles/fetch-basemaps-assets.sh
-./scripts/tiles/fetch-tiles.sh dev      # small Snowdonia bbox (few MB)
-# ./scripts/tiles/fetch-tiles.sh full    # ~3.2 GB Britain and Ireland (z0–15)
+./scripts/tiles/fetch-tiles.sh dev           # small Snowdonia bbox (few MB)
+./scripts/tiles/fetch-elevation.sh dev        # matching Mapterhorn elevation extract
+# ./scripts/tiles/fetch-tiles.sh full        # ~3.2 GB Britain and Ireland (z0–15)
+# ./scripts/tiles/fetch-elevation.sh full    # ~0.9 GB elevation (z0–12)
 ```
 
 Then restart Compose if it is already running, and open http://localhost:5173/map. See [`scripts/tiles/README.md`](scripts/tiles/README.md) for disk space, verification, and monthly refresh.

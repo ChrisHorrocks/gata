@@ -7,6 +7,7 @@ describe('map configuration', () => {
   it('reads tile URL and attribution from configuration', () => {
     const config = getMapConfig({
       pmtilesPath: '/tiles/britain-ireland.pmtiles',
+      elevationPmtilesPath: '/tiles/britain-ireland-elevation.pmtiles',
       assetsPrefix: '/tiles/basemaps-assets',
       attributionLabel: '© OpenStreetMap',
       attributionUrl: 'https://www.openstreetmap.org/copyright',
