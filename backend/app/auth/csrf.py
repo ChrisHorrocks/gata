@@ -6,18 +6,16 @@ import uuid
 from pathlib import Path
 
 from app.auth.constants import CSRF_COOKIE_NAME, CSRF_HEADER_NAME
-from app.config import settings
+from app.config import Settings, settings
 
 
-def _load_csrf_secret() -> bytes:
-    if settings.csrf_secret:
-        return settings.csrf_secret.encode("utf-8")
-    if settings.csrf_secret_file:
-        path = Path(settings.csrf_secret_file)
+def _load_csrf_secret(cfg: Settings | None = None) -> bytes:
+    active = cfg or settings
+    if active.csrf_secret:
+        return active.csrf_secret.encode("utf-8")
+    if active.csrf_secret_file:
+        path = Path(active.csrf_secret_file)
         return path.read_text(encoding="utf-8").strip().encode("utf-8")
-    fixture = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "csrf_secret.txt"
-    if fixture.is_file():
-        return fixture.read_text(encoding="utf-8").strip().encode("utf-8")
     msg = "CSRF secret is not configured"
     raise RuntimeError(msg)
 
@@ -25,8 +23,10 @@ def _load_csrf_secret() -> bytes:
 _CSRF_SECRET: bytes | None = None
 
 
-def csrf_secret_bytes() -> bytes:
+def csrf_secret_bytes(cfg: Settings | None = None) -> bytes:
     global _CSRF_SECRET
+    if cfg is not None:
+        return _load_csrf_secret(cfg)
     if _CSRF_SECRET is None:
         _CSRF_SECRET = _load_csrf_secret()
     return _CSRF_SECRET

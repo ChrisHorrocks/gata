@@ -29,6 +29,8 @@ services:
       SMTP_FROM: noreply@example.com
       APP_PUBLIC_URL: http://localhost:5173
       JWT_ISSUER: http://localhost:5173
+      # Dev-only CSRF signing key (set CSRF_SECRET or CSRF_SECRET_FILE in real deployments).
+      CSRF_SECRET: dev-csrf-secret-not-for-production
     ports:
       - "8000:8000"
     depends_on:
