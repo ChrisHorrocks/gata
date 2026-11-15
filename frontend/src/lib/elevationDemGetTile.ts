@@ -1,5 +1,7 @@
 import { PMTiles } from 'pmtiles'
 
+import { flatTerrariumDemTileBlob } from '@/lib/flatTerrariumDemTile'
+
 const DEM_TILE_SUFFIX = /\/(\d+)\/(\d+)\/(\d+)\.webp(?:\?.*)?$/
 
 const archives = new Map<string, PMTiles>()
@@ -51,7 +53,7 @@ export function createElevationDemGetTile(archiveUrl: string) {
       abortController.signal,
     )
     if (!tile) {
-      throw new Error(`DEM tile missing: ${coords.z}/${coords.x}/${coords.y}`)
+      return { data: flatTerrariumDemTileBlob() }
     }
 
     return { data: new Blob([tile.data]) }
