@@ -40,7 +40,7 @@ export function TripsScreen() {
               {tripsQuery.data.trips.map((trip) => (
                 <li key={trip.id}>
                   <Link
-                    to={`/trips/${trip.id}/settings`}
+                    to={`/trips/${trip.id}/itinerary`}
                     className="flex flex-col gap-0.5 px-3 py-3 hover:bg-muted"
                   >
                     <span className="font-medium">{trip.name}</span>

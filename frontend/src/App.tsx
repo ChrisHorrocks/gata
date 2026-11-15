@@ -8,6 +8,7 @@ import { MagicLinkConfirmScreen } from '@/screens/MagicLinkConfirmScreen'
 import { MapScreen } from '@/screens/MapScreen'
 import { ProfileScreen } from '@/screens/ProfileScreen'
 import { SignInScreen } from '@/screens/SignInScreen'
+import { ItineraryScreen } from '@/screens/ItineraryScreen'
 import { TripSettingsScreen } from '@/screens/TripSettingsScreen'
 import { TripsScreen } from '@/screens/TripsScreen'
 
@@ -33,6 +34,14 @@ export default function App() {
           element={
             <RequireAuth>
               <CreateTripScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/trips/:tripId/itinerary"
+          element={
+            <RequireAuth>
+              <ItineraryScreen />
             </RequireAuth>
           }
         />
