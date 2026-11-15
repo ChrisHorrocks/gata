@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.deps import CurrentUser, DbSession
+from app.models.camp import Camp
 from app.models.day import Day, DayKind
 from app.models.trip import Trip
 from app.schemas.day import (
@@ -200,6 +201,9 @@ def patch_day(
         day.distance_km = None
         day.ascent_m = None
         day.descent_m = None
+        camp = db.scalar(select(Camp).where(Camp.day_id == day.id))
+        if camp is not None:
+            db.delete(camp)
     else:
         day.kind = DayKind.walking.value
         if "distance_km" in body.model_fields_set:

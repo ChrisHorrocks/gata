@@ -1,13 +1,29 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 import { RequireAuth } from '@/components/RequireAuth'
 import { ItineraryScreen } from '@/screens/ItineraryScreen'
+
+vi.mock('@/components/ItineraryMap', () => ({
+  ItineraryMap: ({
+    onMapClick,
+  }: {
+    onMapClick: (coords: { latitude: number; longitude: number }) => void
+  }) => (
+    <button
+      type="button"
+      aria-label="Trip map"
+      onClick={() => onMapClick({ latitude: 53.1, longitude: -4.1 })}
+    >
+      Map stub
+    </button>
+  ),
+}))
 
 const trip = {
   id: 'trip-1',
@@ -17,6 +33,8 @@ const trip = {
   version: 1,
   role: 'organiser' as const,
 }
+
+const campList = { camps: [] as Array<Record<string, unknown>> }
 
 const dayList = {
   days: [
@@ -43,6 +61,7 @@ const server = setupServer(
   ),
   http.get('/api/v1/trips/trip-1', () => HttpResponse.json(trip)),
   http.get('/api/v1/trips/trip-1/days', () => HttpResponse.json(dayList)),
+  http.get('/api/v1/trips/trip-1/camps', () => HttpResponse.json(campList)),
 )
 
 function renderItinerary() {
@@ -68,10 +87,67 @@ function renderItinerary() {
 }
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
-afterEach(() => server.resetHandlers())
+afterEach(() => {
+  cleanup()
+  server.resetHandlers()
+  campList.camps = []
+})
 afterAll(() => server.close())
 
 describe('ItineraryScreen', () => {
+  it('places a camp and saves camp notes', async () => {
+    const user = userEvent.setup()
+    const placed = {
+      id: 'camp-1',
+      day_id: 'day-1',
+      name: 'Camp 1',
+      latitude: 53.1,
+      longitude: -4.1,
+      notes: null,
+      version: 1,
+      pin_number: 1,
+    }
+    const requests: Array<{ method: string; body: unknown }> = []
+    server.use(
+      http.post('/api/v1/trips/trip-1/camps', async ({ request }) => {
+        const body = await request.json()
+        requests.push({ method: 'POST', body })
+        campList.camps = [placed]
+        return HttpResponse.json(placed, { status: 201 })
+      }),
+      http.patch('/api/v1/trips/trip-1/camps/camp-1', async ({ request }) => {
+        const body = (await request.json()) as { notes: string; version: number }
+        requests.push({ method: 'PATCH', body })
+        const saved = { ...placed, notes: body.notes, version: 2 }
+        campList.camps = [saved]
+        return HttpResponse.json(saved)
+      }),
+    )
+
+    renderItinerary()
+    await waitFor(() => {
+      expect(screen.getByLabelText('Trip map')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Trip map' }))
+    await waitFor(() => {
+      expect(requests.some((entry) => entry.method === 'POST')).toBe(true)
+    })
+    const postBody = requests.find((entry) => entry.method === 'POST')?.body as {
+      day_id: string
+      latitude: number
+      longitude: number
+    }
+    expect(postBody.day_id).toBe('day-1')
+
+    await user.type(screen.getByLabelText('Camp notes'), 'Windy col')
+    await user.click(screen.getByRole('button', { name: /save camp notes/i }))
+    await waitFor(() => {
+      const patch = requests.find((entry) => entry.method === 'PATCH')?.body as { notes: string }
+      expect(patch.notes).toBe('Windy col')
+    })
+  })
+
   it('shows day list, totals, and version conflict reload', async () => {
     const user = userEvent.setup()
     const refreshed = {

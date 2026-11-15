@@ -22,12 +22,23 @@ import {
 import { buildMapStyle } from '@/lib/mapStyle'
 import { cn } from '@/lib/utils'
 
+export type MapClickCoords = { latitude: number; longitude: number }
+
 type MapProps = {
   className?: string
   config?: ReturnType<typeof getMapConfig>
+  onMapClick?: (coords: MapClickCoords) => void
+  onMapReady?: (map: maplibregl.Map) => void
+  flyTo?: { latitude: number; longitude: number; token: number } | null
 }
 
-export function Map({ className, config: configProp }: MapProps) {
+export function Map({
+  className,
+  config: configProp,
+  onMapClick,
+  onMapReady,
+  flyTo,
+}: MapProps) {
   const config = useMemo(
     () => configProp ?? getMapConfig(),
     [configProp],
@@ -36,6 +47,12 @@ export function Map({ className, config: configProp }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const terrainReadyRef = useRef(false)
+  const onMapClickRef = useRef(onMapClick)
+  const onMapReadyRef = useRef(onMapReady)
+  useEffect(() => {
+    onMapClickRef.current = onMapClick
+    onMapReadyRef.current = onMapReady
+  }, [onMapClick, onMapReady])
   const [terrainPrefs, setTerrainPrefs] = useState<TerrainLayerPrefs>(() =>
     readTerrainLayerPrefs(),
   )
@@ -70,6 +87,13 @@ export function Map({ className, config: configProp }: MapProps) {
       terrainReadyRef.current = true
       syncTerrainLayers(map, readTerrainLayerPrefs())
       map.resize()
+      onMapReadyRef.current?.(map)
+    })
+    map.on('click', (event) => {
+      onMapClickRef.current?.({
+        latitude: event.lngLat.lat,
+        longitude: event.lngLat.lng,
+      })
     })
     mapRef.current = map
 
@@ -95,6 +119,16 @@ export function Map({ className, config: configProp }: MapProps) {
     if (!map) return
     syncTerrainLayers(map, terrainPrefs)
   }, [terrainPrefs, syncTerrainLayers])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !flyTo) return
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    map.easeTo({
+      center: [flyTo.longitude, flyTo.latitude],
+      duration: reduceMotion ? 0 : 600,
+    })
+  }, [flyTo])
 
   return (
     <div
