@@ -26,6 +26,7 @@ services:
       DATABASE_URL: postgresql+psycopg://gata:gata@postgres:5432/gata
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
+      SMTP_FROM: noreply@example.com
       APP_PUBLIC_URL: http://localhost:5173
       JWT_ISSUER: http://localhost:5173
     ports:
