@@ -38,7 +38,9 @@ def _normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
-def issue_magic_link(db: Session, keyset: KeySet, *, email: str) -> str:
+def issue_magic_link(
+    db: Session, keyset: KeySet, *, email: str, request_ip: str | None = None
+) -> str:
     normalized = _normalize_email(email)
     now = clock.now()
     jti = uuid.uuid4()
@@ -61,6 +63,7 @@ def issue_magic_link(db: Session, keyset: KeySet, *, email: str) -> str:
         expires_at=expires,
         consumed_at=None,
         created_at=now,
+        request_ip=request_ip,
     )
     db.add(row)
     db.commit()

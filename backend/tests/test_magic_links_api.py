@@ -14,6 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.auth.constants import (
+    CSRF_COOKIE_NAME,
     MAGIC_TOKEN_TTL,
     MAGIC_TOKEN_TYP,
     SESSION_COOKIE_NAME,
@@ -24,6 +25,7 @@ from app.auth.magic import MagicTokenError, consume_magic_link, inspect_magic_li
 from app.auth.sessions import advance_session_times_for_tests
 from app.config import settings
 from app.time import clock
+from tests.conftest import safe_write_headers
 
 
 @pytest.fixture(autouse=True)
@@ -45,7 +47,11 @@ def _extract_token_from_mail(body: str) -> str:
 
 
 def _request_link(client: TestClient, email: str) -> dict[str, str]:
-    response = client.post("/api/v1/magic-links", json={"email": email})
+    response = client.post(
+        "/api/v1/magic-links",
+        json={"email": email},
+        headers=safe_write_headers(client_ip="203.0.113.2"),
+    )
     assert response.status_code == 200
     return response.json()
 
@@ -54,9 +60,23 @@ def _sign_in(client: TestClient, mail_capture, email: str) -> str:
     _request_link(client, email)
     assert len(mail_capture.messages) == 1
     token = _extract_token_from_mail(mail_capture.messages[0].body)
-    response = client.post("/api/v1/magic-links/consume", json={"token": token})
+    response = client.post(
+        "/api/v1/magic-links/consume",
+        json={"token": token},
+        headers=safe_write_headers(),
+    )
     assert response.status_code == 200
     return token
+
+
+def _logout(client: TestClient) -> None:
+    csrf = client.cookies.get(CSRF_COOKIE_NAME)
+    assert csrf
+    response = client.post(
+        "/api/v1/session/logout",
+        headers=safe_write_headers(csrf_token=str(csrf)),
+    )
+    assert response.status_code == 204
 
 
 def test_request_magic_link_same_response_and_mail(
@@ -77,13 +97,25 @@ def test_inspect_does_not_consume(api_client: TestClient, mail_capture) -> None:
     _request_link(api_client, email)
     token = _extract_token_from_mail(mail_capture.messages[0].body)
 
-    first = api_client.post("/api/v1/magic-links/inspect", json={"token": token})
-    second = api_client.post("/api/v1/magic-links/inspect", json={"token": token})
+    first = api_client.post(
+        "/api/v1/magic-links/inspect",
+        json={"token": token},
+        headers=safe_write_headers(),
+    )
+    second = api_client.post(
+        "/api/v1/magic-links/inspect",
+        json={"token": token},
+        headers=safe_write_headers(),
+    )
     assert first.status_code == 200
     assert second.status_code == 200
     assert first.json()["email"] == email
 
-    consume = api_client.post("/api/v1/magic-links/consume", json={"token": token})
+    consume = api_client.post(
+        "/api/v1/magic-links/consume",
+        json={"token": token},
+        headers=safe_write_headers(),
+    )
     assert consume.status_code == 200
 
 
@@ -101,8 +133,16 @@ def test_token_single_use(api_client: TestClient, mail_capture) -> None:
     _request_link(api_client, email)
     token = _extract_token_from_mail(mail_capture.messages[0].body)
 
-    first = api_client.post("/api/v1/magic-links/consume", json={"token": token})
-    second = api_client.post("/api/v1/magic-links/consume", json={"token": token})
+    first = api_client.post(
+        "/api/v1/magic-links/consume",
+        json={"token": token},
+        headers=safe_write_headers(),
+    )
+    second = api_client.post(
+        "/api/v1/magic-links/consume",
+        json={"token": token},
+        headers=safe_write_headers(),
+    )
     assert first.status_code == 200
     assert second.status_code == 400
 
@@ -119,7 +159,11 @@ def test_token_expiry(
     compact = issue_magic_link(db_session, keyset, email=email)
 
     controllable_clock.freeze(frozen_at + MAGIC_TOKEN_TTL + timedelta(seconds=1))
-    response = api_client.post("/api/v1/magic-links/consume", json={"token": compact})
+    response = api_client.post(
+        "/api/v1/magic-links/consume",
+        json={"token": compact},
+        headers=safe_write_headers(),
+    )
     assert response.status_code == 400
 
 
@@ -159,7 +203,11 @@ def test_wrong_audience_and_type(
         },
         signing_key,
     )
-    response = api_client.post("/api/v1/magic-links/consume", json={"token": wrong_aud})
+    response = api_client.post(
+        "/api/v1/magic-links/consume",
+        json={"token": wrong_aud},
+        headers=safe_write_headers(),
+    )
     assert response.status_code == 400
 
 
@@ -167,7 +215,11 @@ def test_tampered_token(api_client: TestClient, mail_capture) -> None:
     _request_link(api_client, "tamper@example.com")
     token = _extract_token_from_mail(mail_capture.messages[0].body)
     tampered = token[:-5] + "xxxxx"
-    response = api_client.post("/api/v1/magic-links/consume", json={"token": tampered})
+    response = api_client.post(
+        "/api/v1/magic-links/consume",
+        json={"token": tampered},
+        headers=safe_write_headers(),
+    )
     assert response.status_code == 400
 
 
@@ -187,17 +239,26 @@ def test_non_es256_rejected(api_client: TestClient, mail_capture) -> None:
         + "."
         + signature
     )
-    response = api_client.post("/api/v1/magic-links/consume", json={"token": tampered})
+    response = api_client.post(
+        "/api/v1/magic-links/consume",
+        json={"token": tampered},
+        headers=safe_write_headers(),
+    )
     assert response.status_code == 400
 
 
 def test_session_cookie_flags(api_client: TestClient, mail_capture) -> None:
     _request_link(api_client, "cookie@example.com")
     token = _extract_token_from_mail(mail_capture.messages[0].body)
-    response = api_client.post("/api/v1/magic-links/consume", json={"token": token})
+    response = api_client.post(
+        "/api/v1/magic-links/consume",
+        json={"token": token},
+        headers=safe_write_headers(),
+    )
     assert response.status_code == 200
     header = response.headers.get("set-cookie", "")
     assert SESSION_COOKIE_NAME in header
+    assert CSRF_COOKIE_NAME in header
     assert "httponly" in header.lower()
     assert "secure" in header.lower()
     assert "samesite=lax" in header.lower()
@@ -207,8 +268,7 @@ def test_logout_revokes_immediately(api_client: TestClient, mail_capture) -> Non
     _sign_in(api_client, mail_capture, "logout@example.com")
     assert api_client.get("/api/v1/session").status_code == 200
 
-    logout = api_client.post("/api/v1/session/logout")
-    assert logout.status_code == 204
+    _logout(api_client)
     assert api_client.get("/api/v1/session").status_code == 401
 
 
