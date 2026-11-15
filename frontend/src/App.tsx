@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { RequireAuth } from '@/components/RequireAuth'
 import { HealthScreen } from '@/screens/HealthScreen'
 import { CreateTripScreen } from '@/screens/CreateTripScreen'
+import { GearScreen } from '@/screens/GearScreen'
 import { MagicLinkConfirmScreen } from '@/screens/MagicLinkConfirmScreen'
 import { MapScreen } from '@/screens/MapScreen'
 import { ProfileScreen } from '@/screens/ProfileScreen'
@@ -48,6 +49,14 @@ export default function App() {
           element={
             <RequireAuth>
               <ProfileScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/gear"
+          element={
+            <RequireAuth>
+              <GearScreen />
             </RequireAuth>
           }
         />
