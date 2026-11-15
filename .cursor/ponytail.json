@@ -1,0 +1,5 @@
+{
+  "defaultMode": "ultra",
+  "source": "https://github.com/DietrichGebert/ponytail",
+  "note": "Repo convention. Cursor Cloud uses .cursor/rules/ponytail.mdc. Local hook installs honor PONYTAIL_DEFAULT_MODE or ~/.config/ponytail/config.json (copy defaultMode from here)."
+}
