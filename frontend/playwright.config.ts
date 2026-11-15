@@ -55,6 +55,7 @@ export default defineConfig({
         VITE_TILES_PROXY_TARGET: 'http://127.0.0.1:8080',
         VITE_MAP_PMTILES_PATH: '/tiles/dev-small.pmtiles',
         VITE_MAP_ELEVATION_PMTILES_PATH: '/tiles/dev-elevation.pmtiles',
+        VITE_E2E_MAP_HOOK: '1',
       },
     },
   ],
