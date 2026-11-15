@@ -5,6 +5,7 @@ import { HealthScreen } from '@/screens/HealthScreen'
 import { CreateTripScreen } from '@/screens/CreateTripScreen'
 import { MagicLinkConfirmScreen } from '@/screens/MagicLinkConfirmScreen'
 import { MapScreen } from '@/screens/MapScreen'
+import { ProfileScreen } from '@/screens/ProfileScreen'
 import { SignInScreen } from '@/screens/SignInScreen'
 import { TripSettingsScreen } from '@/screens/TripSettingsScreen'
 import { TripsScreen } from '@/screens/TripsScreen'
@@ -39,6 +40,14 @@ export default function App() {
           element={
             <RequireAuth>
               <TripSettingsScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <RequireAuth>
+              <ProfileScreen />
             </RequireAuth>
           }
         />

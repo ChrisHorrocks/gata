@@ -116,7 +116,12 @@ def test_csrf_from_other_session_rejected(
 ) -> None:
     _sign_in(api_client, mail_capture, "session-a@example.com")
 
-    other_user = User(email="session-b@example.com", display_name=None, created_at=clock.now())
+    other_user = User(
+        email="session-b@example.com",
+        display_name=None,
+        emergency_contacts=[],
+        created_at=clock.now(),
+    )
     db_session.add(other_user)
     db_session.commit()
     session_row, verifier_b = create_session(db_session, user_id=other_user.id)
@@ -245,7 +250,12 @@ def test_rate_limited_unknown_email_same_message(api_client: TestClient, mail_ca
 def test_issue_magic_link_stores_request_ip(db_session: Session) -> None:
     from app.models.link_token import LinkToken
 
-    user = User(email="ipstore@example.com", display_name=None, created_at=clock.now())
+    user = User(
+        email="ipstore@example.com",
+        display_name=None,
+        emergency_contacts=[],
+        created_at=clock.now(),
+    )
     db_session.add(user)
     db_session.commit()
 

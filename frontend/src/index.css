@@ -64,3 +64,12 @@ dialog::backdrop {
   overscroll-behavior: contain;
   background: rgb(0 0 0 / 45%);
 }
+
+.field-input:user-invalid {
+  border-color: oklch(0.577 0.245 27.325);
+  outline-color: oklch(0.577 0.245 27.325);
+}
+
+.field-group:has(.field-input:user-invalid) {
+  border-color: oklch(0.577 0.245 27.325);
+}

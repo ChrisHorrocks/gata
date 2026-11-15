@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { deleteTrip, fetchTrip, patchTrip, type Trip } from '@/api/trips'
+import { AppShell } from '@/components/AppShell'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { VersionConflictDialog } from '@/components/VersionConflictDialog'
 import { Button } from '@/components/ui/button'
@@ -199,42 +200,46 @@ export function TripSettingsScreen() {
 
   if (tripQuery.isPending) {
     return (
-      <p className="p-6 text-sm text-muted-foreground" role="status">
-        Loading trip…
-      </p>
+      <AppShell>
+        <p className="text-sm text-muted-foreground" role="status">
+          Loading trip…
+        </p>
+      </AppShell>
     )
   }
 
   if (tripQuery.isError) {
     return (
-      <main className="mx-auto max-w-lg p-6">
+      <AppShell>
         <p role="alert" className="text-sm text-destructive">
           Trip not found.
         </p>
         <Button type="button" variant="outline" className="mt-4" asChild>
           <Link to="/trips">Back to trips</Link>
         </Button>
-      </main>
+      </AppShell>
     )
   }
 
   const trip = tripQuery.data
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-lg flex-col gap-4 p-6">
-      <TripSettingsForm
-        key={`${trip.id}-${trip.version}-${formKey}`}
-        trip={trip}
-        tripId={tripId}
-        onTripReplaced={(next) => {
-          void queryClient.setQueryData(['trip', tripId], next)
-          setFormKey((k) => k + 1)
-        }}
-      />
+    <AppShell>
+      <div className="flex flex-col gap-4">
+        <TripSettingsForm
+          key={`${trip.id}-${trip.version}-${formKey}`}
+          trip={trip}
+          tripId={tripId}
+          onTripReplaced={(next) => {
+            void queryClient.setQueryData(['trip', tripId], next)
+            setFormKey((k) => k + 1)
+          }}
+        />
 
-      <Button type="button" variant="outline" asChild>
-        <Link to="/trips">Back to trips</Link>
-      </Button>
-    </main>
+        <Button type="button" variant="outline" asChild>
+          <Link to="/trips">Back to trips</Link>
+        </Button>
+      </div>
+    </AppShell>
   )
 }
