@@ -46,7 +46,7 @@ def database_url() -> str:
 
 
 @pytest.fixture(scope="session")
-def migrated_database(database_url: str) -> Generator[str, None, None]:
+def migrated_database(database_url: str) -> Generator[str]:
     db_url = database_url
     alembic_cfg = Config("alembic.ini")
     alembic_cfg.set_main_option("sqlalchemy.url", db_url)
@@ -55,7 +55,7 @@ def migrated_database(database_url: str) -> Generator[str, None, None]:
 
 
 @pytest.fixture
-def db_session(migrated_database: str) -> Generator[Session, None, None]:
+def db_session(migrated_database: str) -> Generator[Session]:
     engine = create_engine(migrated_database)
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
@@ -67,14 +67,14 @@ def db_session(migrated_database: str) -> Generator[Session, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def reset_clock() -> Generator[None, None, None]:
+def reset_clock() -> Generator[None]:
     clock.unfreeze()
     yield
     clock.unfreeze()
 
 
 @pytest.fixture
-def controllable_clock() -> Generator[Clock, None, None]:
+def controllable_clock() -> Generator[Clock]:
     clock.unfreeze()
     yield clock
     clock.unfreeze()
@@ -93,7 +93,7 @@ def mail_capture() -> MailCapture:
 
 
 @pytest.fixture(autouse=True)
-def capture_mail(mail_capture: MailCapture) -> Generator[MailCapture, None, None]:
+def capture_mail(mail_capture: MailCapture) -> Generator[MailCapture]:
     set_mailer(mail_capture)
     app.dependency_overrides[get_mailer] = lambda: mail_capture
     yield mail_capture
@@ -108,11 +108,11 @@ def capture_mail(mail_capture: MailCapture) -> Generator[MailCapture, None, None
 
 
 @pytest.fixture
-def api_client(migrated_database: str) -> Generator[TestClient, None, None]:
+def api_client(migrated_database: str) -> Generator[TestClient]:
     engine = create_engine(migrated_database)
     session_factory = sessionmaker(bind=engine)
 
-    def override_get_db() -> Generator[Session, None, None]:
+    def override_get_db() -> Generator[Session]:
         db = session_factory()
         try:
             yield db
