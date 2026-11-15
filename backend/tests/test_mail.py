@@ -18,6 +18,7 @@ COMPOSE_BACKEND_ENV = {
     "SMTP_PORT": "1025",
     "APP_PUBLIC_URL": "http://localhost:5173",
     "JWT_ISSUER": "http://localhost:5173",
+    "CSRF_SECRET": "dev-csrf-secret-not-for-production",
 }
 
 
@@ -113,3 +114,18 @@ def test_validate_runtime_settings_with_compose_env(monkeypatch: pytest.MonkeyPa
     monkeypatch.setenv("SMTP_FROM", "noreply@example.com")
     configured = Settings(_env_file=None)
     validate_runtime_settings(configured)
+
+
+def test_validate_runtime_settings_requires_csrf_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("CSRF_SECRET", raising=False)
+    monkeypatch.delenv("CSRF_SECRET_FILE", raising=False)
+    configured = Settings(
+        _env_file=None,
+        smtp_from="noreply@example.com",
+        app_public_url="http://localhost:5173",
+        jwt_issuer="http://localhost:5173",
+        csrf_secret=None,
+        csrf_secret_file=None,
+    )
+    with pytest.raises(RuntimeError, match="CSRF secret is not configured"):
+        validate_runtime_settings(configured)
