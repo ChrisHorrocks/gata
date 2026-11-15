@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useParams } from 'react-router-dom'
 
+import { createCamp, fetchCamps, patchCamp, type Camp, type CampListResponse } from '@/api/camps'
 import {
   createDay,
   deleteDay,
@@ -13,6 +14,7 @@ import {
   type DayKind,
   type DayListResponse,
 } from '@/api/days'
+import { ItineraryMap } from '@/components/ItineraryMap'
 import { fetchTrip } from '@/api/trips'
 import { AppShell } from '@/components/AppShell'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -20,7 +22,13 @@ import { VersionConflictDialog } from '@/components/VersionConflictDialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ApiError } from '@/api/client'
+import {
+  campByDayId,
+  effectiveCampForDay,
+  orderedCampPins,
+} from '@/lib/campItinerary'
 import { isVersionConflict } from '@/lib/versionConflict'
+import type { Camp as CampRow } from '@/api/camps'
 
 type RowDraft = {
   kind: DayKind
@@ -73,7 +81,14 @@ type DayRowProps = {
   index: number
   dayCount: number
   pending: boolean
+  selected: boolean
+  effectiveCamp: CampRow | null
+  campNotes: string
+  onSelect: () => void
   onDraftChange: (next: RowDraft) => void
+  onCampNotesChange: (value: string) => void
+  onSaveCampNotes: () => void
+  campNotesPending: boolean
   onSaved: (dayId: string) => void
   onDeleted: () => void
   onReordered: (list: DayListResponse) => void
@@ -87,7 +102,14 @@ function DayRow({
   index,
   dayCount,
   pending,
+  selected,
+  effectiveCamp,
+  campNotes,
+  onSelect,
   onDraftChange,
+  onCampNotesChange,
+  onSaveCampNotes,
+  campNotesPending,
   onSaved,
   onDeleted,
   onReordered,
@@ -184,7 +206,10 @@ function DayRow({
 
   return (
     <>
-      <tr className="border-b border-border align-top">
+      <tr
+        className={`border-b border-border align-top ${selected ? 'bg-muted/40' : ''}`}
+        onClick={onSelect}
+      >
         <th scope="row" className="px-2 py-3 text-left font-medium sm:px-3">
           <span className="block text-xs text-muted-foreground">Day {index + 1}</span>
           <time dateTime={day.date}>{day.date}</time>
@@ -197,6 +222,7 @@ function DayRow({
             id={`kind-${day.id}`}
             className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
             value={draft.kind}
+            onClick={(event) => event.stopPropagation()}
             onChange={(event) => {
               const kind = event.target.value as DayKind
               onDraftChange({
@@ -348,6 +374,47 @@ function DayRow({
               {fieldError}
             </p>
           )}
+          {selected && (
+            <div className="mt-3 text-left">
+              <p className="text-xs text-muted-foreground">
+                {day.kind === 'walking'
+                  ? effectiveCamp
+                    ? `Camp pin ${effectiveCamp.pin_number} · ${effectiveCamp.name}`
+                    : 'Click the map to place tonight’s camp.'
+                  : effectiveCamp
+                    ? `Stays at camp pin ${effectiveCamp.pin_number} (${effectiveCamp.name}).`
+                    : 'No camp yet from a previous walking day.'}
+              </p>
+              {day.kind === 'walking' && effectiveCamp && (
+                <>
+                  <label className="mt-2 block text-xs font-medium" htmlFor={`camp-notes-${day.id}`}>
+                    Camp notes
+                  </label>
+                  <textarea
+                    id={`camp-notes-${day.id}`}
+                    rows={2}
+                    className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                    value={campNotes}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(event) => onCampNotesChange(event.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="mt-2"
+                    disabled={campNotesPending}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onSaveCampNotes()
+                    }}
+                  >
+                    Save camp notes
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
         </td>
       </tr>
       {showDelete &&
@@ -370,6 +437,9 @@ export function ItineraryScreen() {
   const { tripId = '' } = useParams()
   const queryClient = useQueryClient()
   const [drafts, setDrafts] = useState<Record<string, RowDraft>>({})
+  const [campNoteDrafts, setCampNoteDrafts] = useState<Record<string, string>>({})
+  const [selectedDayId, setSelectedDayId] = useState<string | null>(null)
+  const [flyToToken, setFlyToToken] = useState(0)
   const [showConflict, setShowConflict] = useState(false)
   const [conflictError, setConflictError] = useState<ApiError | null>(null)
 
@@ -384,6 +454,35 @@ export function ItineraryScreen() {
     queryFn: () => fetchDays(tripId),
     enabled: tripId.length > 0,
   })
+
+  const campsQuery = useQuery({
+    queryKey: ['camps', tripId],
+    queryFn: () => fetchCamps(tripId),
+    enabled: tripId.length > 0,
+  })
+
+  const pins = useMemo(
+    () => orderedCampPins(daysQuery.data?.days ?? [], campsQuery.data?.camps ?? []),
+    [campsQuery.data?.camps, daysQuery.data?.days],
+  )
+  const days = daysQuery.data?.days ?? []
+  const camps = campsQuery.data?.camps ?? []
+
+  const selectedDay = days.find((day) => day.id === selectedDayId) ?? days[0] ?? null
+  const flyTo = useMemo(() => {
+    if (!selectedDay) {
+      return null
+    }
+    const camp = effectiveCampForDay(days, camps, selectedDay.id)
+    if (!camp) {
+      return null
+    }
+    return {
+      latitude: camp.latitude,
+      longitude: camp.longitude,
+      token: flyToToken,
+    }
+  }, [camps, days, flyToToken, selectedDay])
 
   const clearDraft = useCallback((dayId: string) => {
     setDrafts((previous) => {
@@ -418,20 +517,98 @@ export function ItineraryScreen() {
     setShowConflict(true)
   }, [])
 
+  const placeCampMutation = useMutation({
+    mutationFn: async (coords: { latitude: number; longitude: number }) => {
+      if (!selectedDay || selectedDay.kind !== 'walking') {
+        throw new Error('no-walking-day')
+      }
+      const existing = campByDayId(camps).get(selectedDay.id)
+      if (existing) {
+        return patchCamp(tripId, existing.id, {
+          version: existing.version,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        })
+      }
+      let walkingPin = 0
+      for (const day of days) {
+        if (day.kind === 'walking') {
+          walkingPin += 1
+        }
+        if (day.id === selectedDay.id) {
+          break
+        }
+      }
+      return createCamp(tripId, {
+        day_id: selectedDay.id,
+        name: `Camp ${walkingPin}`,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      })
+    },
+    onSuccess: async () => {
+      await campsQuery.refetch()
+    },
+    onError: (error) => {
+      if (isVersionConflict(error)) {
+        handleConflict(error)
+      }
+    },
+  })
+
+  const campNotesMutation = useMutation({
+    mutationFn: async ({ camp, notes }: { camp: Camp; notes: string }) =>
+      patchCamp(tripId, camp.id, { version: camp.version, notes: notes.trim() === '' ? null : notes }),
+    onSuccess: async (saved) => {
+      setCampNoteDrafts((previous) => {
+        const next = { ...previous }
+        delete next[saved.day_id]
+        return next
+      })
+      await campsQuery.refetch()
+    },
+    onError: (error) => {
+      if (isVersionConflict(error)) {
+        handleConflict(error)
+      }
+    },
+  })
+
   const reloadFromServer = async () => {
     setShowConflict(false)
     const error = conflictError
     setConflictError(null)
     if (error?.body && typeof error.body === 'object' && error.body !== null) {
-      const detail = (error.body as { detail?: { current?: DayListResponse | Day } }).detail
+      const detail = (error.body as { detail?: { current?: DayListResponse | Day | Camp | CampListResponse } })
+        .detail
       const current = detail?.current
       if (current && 'days' in current) {
         applyList(current)
         return
       }
+      if (current && 'camps' in current) {
+        queryClient.setQueryData(['camps', tripId], current)
+        setCampNoteDrafts({})
+        return
+      }
+      if (current && 'day_id' in current) {
+        const camp = current as Camp
+        queryClient.setQueryData(['camps', tripId], (previous: CampListResponse | undefined) => {
+          if (!previous) {
+            return { camps: [camp] }
+          }
+          const rows = previous.camps.some((row) => row.id === camp.id)
+            ? previous.camps.map((row) => (row.id === camp.id ? camp : row))
+            : [...previous.camps, camp]
+          return { camps: rows }
+        })
+        setCampNoteDrafts({})
+        return
+      }
     }
     setDrafts({})
-    await daysQuery.refetch()
+    setCampNoteDrafts({})
+    await Promise.all([daysQuery.refetch(), campsQuery.refetch()])
   }
 
   const pending = addMutation.isPending
@@ -467,15 +644,32 @@ export function ItineraryScreen() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid min-h-0 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-stretch">
         <section
-          aria-label="Trip map"
-          className="flex min-h-64 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground"
+          aria-label="Itinerary map pane"
+          className="relative min-h-72 overflow-hidden rounded-lg border border-border bg-card lg:min-h-[32rem]"
         >
-          Map will sit here in a later ticket. Plan days in the list on the right.
+          <div className="flex h-full min-h-0 flex-col p-2">
+            <p className="mb-2 shrink-0 text-xs text-muted-foreground">
+              {selectedDay?.kind === 'walking'
+                ? 'Click the map to place or move the selected day’s camp.'
+                : 'Select a walking day to place a camp. Rest days stay at the previous camp.'}
+            </p>
+            <div className="relative min-h-0 flex-1 overflow-hidden rounded-md border border-border">
+              <ItineraryMap
+                pins={pins}
+                flyTo={flyTo}
+                onMapClick={(coords) => {
+                  if (selectedDay?.kind === 'walking') {
+                    placeCampMutation.mutate(coords)
+                  }
+                }}
+              />
+            </div>
+          </div>
         </section>
 
-        <section aria-label="Itinerary days" className="min-w-0">
+        <section aria-label="Itinerary days" className="min-h-0 min-w-0">
           <div className="mb-3 flex flex-wrap gap-2">
             <Button
               type="button"
@@ -528,6 +722,10 @@ export function ItineraryScreen() {
                 <tbody className="motion-safe:transition-[transform] motion-reduce:transition-none">
                   {daysQuery.data.days.map((day, index) => {
                     const draft = drafts[day.id] ?? rowFromDay(day)
+                    const effectiveCamp = effectiveCampForDay(daysQuery.data.days, camps, day.id)
+                    const selected = (selectedDay?.id ?? daysQuery.data.days[0]?.id) === day.id
+                    const campNotes =
+                      campNoteDrafts[day.id] ?? effectiveCamp?.notes ?? ''
                     return (
                       <DayRow
                         key={day.id}
@@ -537,6 +735,24 @@ export function ItineraryScreen() {
                         index={index}
                         dayCount={daysQuery.data.days.length}
                         pending={pending}
+                        selected={selected}
+                        effectiveCamp={effectiveCamp}
+                        campNotes={campNotes}
+                        campNotesPending={campNotesMutation.isPending}
+                        onSelect={() => {
+                          setSelectedDayId(day.id)
+                          setFlyToToken((value) => value + 1)
+                        }}
+                        onCampNotesChange={(value) =>
+                          setCampNoteDrafts((previous) => ({ ...previous, [day.id]: value }))
+                        }
+                        onSaveCampNotes={() => {
+                          const camp = campByDayId(camps).get(day.id)
+                          if (!camp) {
+                            return
+                          }
+                          campNotesMutation.mutate({ camp, notes: campNotes })
+                        }}
                         onDraftChange={(next) =>
                           setDrafts((previous) => ({ ...previous, [day.id]: next }))
                         }
