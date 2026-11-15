@@ -1,0 +1,9 @@
+{
+  "include": ["app"],
+  "exclude": ["tests", ".venv"],
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic",
+  "reportMissingTypeStubs": false
+}
