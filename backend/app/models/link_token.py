@@ -16,3 +16,4 @@ class LinkToken(Base):
     expires_at: Mapped[datetime] = mapped_column()
     consumed_at: Mapped[datetime | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column()
+    request_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)

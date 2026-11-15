@@ -1,7 +1,14 @@
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
 
 from app.auth.constants import MAGIC_LINK_RESPONSE_MESSAGE
+from app.auth.csrf import csrf_cookie_kwargs, issue_csrf_token
 from app.auth.magic import MagicTokenError, consume_magic_link, inspect_magic_link, issue_magic_link
+from app.auth.rate_limits import (
+    RateLimitExceeded,
+    check_magic_link_rate_limits,
+    client_ip_from_request,
+)
 from app.auth.sessions import create_session, format_session_cookie, session_cookie_kwargs
 from app.config import settings
 from app.deps import DbSession, Mail, SigningKeys
@@ -21,11 +28,22 @@ router = APIRouter()
 @router.post("/magic-links", response_model=MagicLinkRequestResponse)
 def request_magic_link(
     body: MagicLinkRequest,
+    request: Request,
     db: DbSession,
     mail: Mail,
     keyset: SigningKeys,
-) -> MagicLinkRequestResponse:
-    compact = issue_magic_link(db, keyset, email=str(body.email))
+) -> MagicLinkRequestResponse | JSONResponse:
+    client_host = request.client.host if request.client is not None else None
+    request_ip = client_ip_from_request(dict(request.headers), client_host)
+    try:
+        check_magic_link_rate_limits(db, email=str(body.email), request_ip=request_ip)
+    except RateLimitExceeded:
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content=MagicLinkRequestResponse(message=MAGIC_LINK_RESPONSE_MESSAGE).model_dump(),
+        )
+
+    compact = issue_magic_link(db, keyset, email=str(body.email), request_ip=request_ip)
     link = f"{settings.app_public_url.rstrip('/')}/sign-in/confirm?token={compact}"
     mail.send(
         to=str(body.email),
@@ -70,6 +88,17 @@ def consume_magic_link_endpoint(
         httponly=bool(cookie["httponly"]),
         secure=bool(cookie["secure"]),
         samesite="lax",
+    )
+
+    csrf_value = issue_csrf_token(session_row.id, verifier)
+    csrf = csrf_cookie_kwargs(csrf_value)
+    response.set_cookie(
+        key=str(csrf["key"]),
+        value=str(csrf["value"]),
+        path=str(csrf["path"]),
+        secure=bool(csrf["secure"]),
+        samesite="lax",
+        httponly=bool(csrf["httponly"]),
     )
 
     return SessionResponse(

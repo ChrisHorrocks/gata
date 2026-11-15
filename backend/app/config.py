@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     jwt_signing_keys_json: str | None = None
     jwt_signing_keys_file: str | None = None
 
+    csrf_secret: str | None = None
+    csrf_secret_file: str | None = None
+
     @field_validator("smtp_from", mode="before")
     @classmethod
     def reject_missing_smtp_from(cls, value: object) -> object:

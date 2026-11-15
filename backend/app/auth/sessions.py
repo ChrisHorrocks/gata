@@ -22,7 +22,7 @@ def _hash_verifier(verifier: str) -> str:
     return hashlib.sha256(verifier.encode("utf-8")).hexdigest()
 
 
-def _parse_cookie(raw: str | None) -> tuple[uuid.UUID, str] | None:
+def parse_session_cookie(raw: str | None) -> tuple[uuid.UUID, str] | None:
     if not raw:
         return None
     if "." not in raw:
@@ -70,7 +70,7 @@ def _session_is_valid(row: SessionRow, *, now: datetime) -> bool:
 def load_session(
     db: Session, *, cookie_value: str | None, touch: bool = True
 ) -> tuple[SessionRow, User] | None:
-    parsed = _parse_cookie(cookie_value)
+    parsed = parse_session_cookie(cookie_value)
     if parsed is None:
         return None
     session_id, verifier = parsed
@@ -106,7 +106,7 @@ def revoke_session(db: Session, *, session_id: uuid.UUID) -> None:
 
 
 def revoke_from_cookie(db: Session, *, cookie_value: str | None) -> None:
-    parsed = _parse_cookie(cookie_value)
+    parsed = parse_session_cookie(cookie_value)
     if parsed is None:
         return
     session_id, _ = parsed

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.auth.csrf import csrf_secret_bytes
 from app.auth.keys import load_signing_keyset
 from app.config import Settings, settings
 
@@ -19,3 +20,4 @@ def validate_runtime_settings(cfg: Settings | None = None) -> None:
         msg = "JWT_ISSUER must be an http(s) URL"
         raise RuntimeError(msg)
     load_signing_keyset()
+    csrf_secret_bytes()

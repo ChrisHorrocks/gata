@@ -8,12 +8,27 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from alembic import command
+from app.auth.constants import CSRF_HEADER_NAME
 from app.config import settings
 from app.db import get_db
 from app.deps import get_mailer
 from app.mail import MailCapture, SmtpMailer, set_mailer
 from app.main import app
 from app.time import Clock, clock
+
+
+def safe_write_headers(
+    *, csrf_token: str | None = None, client_ip: str | None = None
+) -> dict[str, str]:
+    headers = {
+        "Origin": settings.app_public_url.rstrip("/"),
+        "Sec-Fetch-Site": "same-origin",
+    }
+    if csrf_token is not None:
+        headers[CSRF_HEADER_NAME] = csrf_token
+    if client_ip is not None:
+        headers["X-Forwarded-For"] = client_ip
+    return headers
 
 
 @pytest.fixture(scope="session")
