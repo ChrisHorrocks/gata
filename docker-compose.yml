@@ -66,7 +66,7 @@ services:
     depends_on:
       - backend
       - caddy
-    command: npm run dev -- --host 0.0.0.0
+    # Default CMD from frontend/Dockerfile; entrypoint runs npm ci when package-lock.json changes.
     volumes:
       - ./frontend:/app
       - /app/node_modules
