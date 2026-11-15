@@ -184,7 +184,7 @@ def test_delete_member_gets_403(
     _sign_in(api_client, mail_capture, "alice@example.com")
     trip_json = _create_trip(api_client)
 
-    bob = User(email="bob@example.com", created_at=datetime.now(UTC))
+    bob = User(email="bob@example.com", emergency_contacts=[], created_at=datetime.now(UTC))
     db_session.add(bob)
     db_session.flush()
     db_session.add(
