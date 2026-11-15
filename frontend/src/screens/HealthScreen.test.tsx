@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
@@ -18,7 +19,9 @@ function renderScreen() {
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <HealthScreen />
+      <MemoryRouter>
+        <HealthScreen />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }

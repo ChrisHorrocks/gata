@@ -11,11 +11,25 @@ docker compose up --build
 | Service   | URL |
 | --------- | --- |
 | SPA       | http://localhost:5173 |
+| Map demo  | http://localhost:5173/map |
+| Tile HTTP | http://localhost:8080/tiles/… (Caddy; proxied as `/tiles` via Vite) |
 | API       | http://localhost:8000/docs |
 | Mailpit   | http://localhost:8025 |
 | Postgres  | `localhost:5432` (user/password/db: `gata`) |
 
-The Vite dev server proxies `/api` to the API so the browser stays on a single origin. Open the SPA to see `GET /api/v1/health` read from Postgres (at `/health`).
+The Vite dev server proxies `/api` to the API and `/tiles` to Caddy so the browser stays on a single origin. Open the SPA to see `GET /api/v1/health` read from Postgres (at `/health`), or `/map` for the self-hosted basemap.
+
+### Map tiles (not in git)
+
+PMTiles extracts are large (~3.2 GB for Britain and Ireland) and are **never committed**. Fetch vendored fonts/sprites and a tile extract before using the map:
+
+```bash
+./scripts/tiles/fetch-basemaps-assets.sh
+./scripts/tiles/fetch-tiles.sh dev      # small Snowdonia bbox (few MB)
+# ./scripts/tiles/fetch-tiles.sh full    # ~3.2 GB Britain and Ireland (z0–15)
+```
+
+Then restart Compose if it is already running, and open http://localhost:5173/map. See [`scripts/tiles/README.md`](scripts/tiles/README.md) for disk space, verification, and monthly refresh.
 
 ### Try magic-link sign-in
 
@@ -43,6 +57,7 @@ uvicorn app.main:app --reload
 cd frontend
 npm install
 export VITE_API_PROXY_TARGET=http://localhost:8000
+export VITE_TILES_PROXY_TARGET=http://localhost:8080
 npm run dev
 ```
 

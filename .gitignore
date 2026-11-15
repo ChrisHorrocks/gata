@@ -225,3 +225,8 @@ frontend/dist/
 
 # Local env
 .env
+
+# Map tiles (never commit PMTiles extracts)
+tiles/data/*.pmtiles
+tiles/data/basemaps-assets/
+scripts/tiles/.bin/

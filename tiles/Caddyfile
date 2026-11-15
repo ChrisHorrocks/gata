@@ -1,0 +1,10 @@
+:8080 {
+	root * {$TILES_ROOT:/srv/tiles}
+	encode gzip zstd
+	header {
+		Accept-Ranges bytes
+		Access-Control-Allow-Origin *
+		Access-Control-Expose-Headers "Content-Range"
+	}
+	file_server
+}

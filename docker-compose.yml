@@ -39,15 +39,29 @@ services:
       - ./backend:/app
     working_dir: /app
 
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      TILES_ROOT: /srv/tiles
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./tiles/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./tiles/data:/srv/tiles:ro
+
   frontend:
     build:
       context: ./frontend
     environment:
       VITE_API_PROXY_TARGET: http://backend:8000
+      VITE_TILES_PROXY_TARGET: http://caddy:8080
+      VITE_MAP_PMTILES_PATH: /tiles/dev-small.pmtiles
+      VITE_MAP_ASSETS_PREFIX: /tiles/basemaps-assets
     ports:
       - "5173:5173"
     depends_on:
       - backend
+      - caddy
     command: npm run dev -- --host 0.0.0.0
     volumes:
       - ./frontend:/app
