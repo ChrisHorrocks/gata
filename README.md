@@ -17,7 +17,7 @@ docker compose up --build
 | Mailpit   | http://localhost:8025 |
 | Postgres  | `localhost:5432` (user/password/db: `gata`) |
 
-The Vite dev server proxies `/api` to the API and `/tiles` to Caddy so the browser stays on a single origin. Open the SPA to see `GET /api/v1/health` read from Postgres, or `/map` for the self-hosted basemap.
+The Vite dev server proxies `/api` to the API and `/tiles` to Caddy so the browser stays on a single origin. Open the SPA to see `GET /api/v1/health` read from Postgres (at `/health`), or `/map` for the self-hosted basemap.
 
 ### Map tiles (not in git)
 
@@ -30,6 +30,13 @@ PMTiles extracts are large (~3.2 GB for Britain and Ireland) and are **never com
 ```
 
 Then restart Compose if it is already running, and open http://localhost:5173/map. See [`scripts/tiles/README.md`](scripts/tiles/README.md) for disk space, verification, and monthly refresh.
+
+### Try magic-link sign-in
+
+1. With the stack running, open http://localhost:5173/sign-in.
+2. Enter your email and submit. Open Mailpit at http://localhost:8025 and open the sign-in message.
+3. Follow the link to the “Sign in as …?” page, then click **Sign in**.
+4. Visit http://localhost:5173/trips to confirm you are signed in, or sign out from that screen.
 
 Copy `.env.example` to `.env` only when overriding defaults for non-Compose runs.
 
@@ -50,6 +57,7 @@ uvicorn app.main:app --reload
 cd frontend
 npm install
 export VITE_API_PROXY_TARGET=http://localhost:8000
+export VITE_TILES_PROXY_TARGET=http://localhost:8080
 npm run dev
 ```
 

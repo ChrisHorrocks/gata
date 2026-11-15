@@ -8,8 +8,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from alembic import command
+from app.config import settings
 from app.db import get_db
-from app.mail import MailCapture
+from app.deps import get_mailer
+from app.mail import MailCapture, SmtpMailer, set_mailer
 from app.main import app
 from app.time import Clock, clock
 
@@ -44,6 +46,13 @@ def db_session(migrated_database: str) -> Generator[Session, None, None]:
         engine.dispose()
 
 
+@pytest.fixture(autouse=True)
+def reset_clock() -> Generator[None, None, None]:
+    clock.unfreeze()
+    yield
+    clock.unfreeze()
+
+
 @pytest.fixture
 def controllable_clock() -> Generator[Clock, None, None]:
     clock.unfreeze()
@@ -63,6 +72,15 @@ def mail_capture() -> MailCapture:
     return MailCapture()
 
 
+@pytest.fixture(autouse=True)
+def capture_mail(mail_capture: MailCapture) -> Generator[MailCapture, None, None]:
+    set_mailer(mail_capture)
+    app.dependency_overrides[get_mailer] = lambda: mail_capture
+    yield mail_capture
+    app.dependency_overrides.pop(get_mailer, None)
+    set_mailer(SmtpMailer(host=settings.smtp_host, port=settings.smtp_port))
+
+
 @pytest.fixture
 def api_client(migrated_database: str) -> Generator[TestClient, None, None]:
     engine = create_engine(migrated_database)
@@ -76,7 +94,7 @@ def api_client(migrated_database: str) -> Generator[TestClient, None, None]:
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as client:
+    with TestClient(app, base_url="https://testserver") as client:
         yield client
     app.dependency_overrides.clear()
     engine.dispose()

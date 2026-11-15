@@ -7,7 +7,7 @@ export function MapScreen() {
     <div className="flex min-h-svh flex-col bg-neutral-50">
       <header className="flex items-center justify-between border-b bg-white px-4 py-3">
         <h1 className="text-lg font-semibold">gata map</h1>
-        <Link className="text-sm text-blue-700 underline" to="/">
+        <Link className="text-sm text-blue-700 underline" to="/health">
           Health check
         </Link>
       </header>
