@@ -2,12 +2,23 @@ import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import maplibreWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { Protocol } from 'pmtiles'
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 maplibregl.setWorkerUrl(maplibreWorker)
 
 import { getMapConfig } from '@/config/map'
 import { MapAttribution } from '@/components/MapAttribution'
+import { MapTerrainControls } from '@/components/MapTerrainControls'
+import {
+  applyTerrainLayerVisibility,
+  ensureTerrainProtocols,
+  installTerrainLayers,
+} from '@/lib/mapTerrainLayers'
+import {
+  readTerrainLayerPrefs,
+  terrainAttributionVisible,
+  type TerrainLayerPrefs,
+} from '@/lib/mapTerrainSession'
 import { buildMapStyle } from '@/lib/mapStyle'
 import { cn } from '@/lib/utils'
 
@@ -23,6 +34,18 @@ export function Map({ className, config: configProp }: MapProps) {
   )
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
+  const terrainReadyRef = useRef(false)
+  const [terrainPrefs, setTerrainPrefs] = useState<TerrainLayerPrefs>(() =>
+    readTerrainLayerPrefs(),
+  )
+
+  const syncTerrainLayers = useCallback(
+    (map: maplibregl.Map, prefs: TerrainLayerPrefs) => {
+      if (!terrainReadyRef.current) return
+      applyTerrainLayerVisibility(map, prefs.hillshade, prefs.contours)
+    },
+    [],
+  )
 
   useEffect(() => {
     const container = containerRef.current
@@ -32,6 +55,8 @@ export function Map({ className, config: configProp }: MapProps) {
     maplibregl.addProtocol('pmtiles', protocol.tile)
 
     const origin = window.location.origin
+    const demSource = ensureTerrainProtocols(maplibregl, config, origin)
+
     const map = new maplibregl.Map({
       container,
       style: buildMapStyle(config, origin),
@@ -40,16 +65,26 @@ export function Map({ className, config: configProp }: MapProps) {
       attributionControl: false,
     })
     map.on('load', () => {
+      installTerrainLayers(map, demSource)
+      terrainReadyRef.current = true
+      syncTerrainLayers(map, readTerrainLayerPrefs())
       map.resize()
     })
     mapRef.current = map
 
     return () => {
+      terrainReadyRef.current = false
       map.remove()
       mapRef.current = null
       maplibregl.removeProtocol('pmtiles')
     }
-  }, [config])
+  }, [config, syncTerrainLayers])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    syncTerrainLayers(map, terrainPrefs)
+  }, [terrainPrefs, syncTerrainLayers])
 
   return (
     <div className={cn('relative h-full min-h-[320px] w-full', className)}>
@@ -59,7 +94,11 @@ export function Map({ className, config: configProp }: MapProps) {
         data-testid="maplibre-container"
         aria-label="Trip map"
       />
-      <MapAttribution config={config} />
+      <MapTerrainControls value={terrainPrefs} onChange={setTerrainPrefs} />
+      <MapAttribution
+        config={config}
+        terrainAttributionVisible={terrainAttributionVisible(terrainPrefs)}
+      />
     </div>
   )
 }

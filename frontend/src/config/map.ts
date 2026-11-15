@@ -3,32 +3,47 @@
 export type MapConfig = {
   /** URL path on the app origin, e.g. /tiles/dev-small.pmtiles */
   pmtilesPath: string
+  /** Self-hosted Mapterhorn Terrarium elevation PMTiles (z0–12). */
+  elevationPmtilesPath: string
   /** Prefix path for vendored basemaps-assets, e.g. /basemaps-assets */
   assetsPrefix: string
   /** Visible attribution label (always includes OpenStreetMap). */
   attributionLabel: string
   /** OpenStreetMap copyright page. */
   attributionUrl: string
+  /** Mapterhorn attribution label when terrain layers are on. */
+  terrainAttributionLabel: string
+  /** Mapterhorn attribution page. */
+  terrainAttributionUrl: string
   defaultCenter: [number, number]
   defaultZoom: number
 }
 
 const DEFAULT_PMTILES_PATH =
   import.meta.env.VITE_MAP_PMTILES_PATH ?? '/tiles/dev-small.pmtiles'
+const DEFAULT_ELEVATION_PMTILES_PATH =
+  import.meta.env.VITE_MAP_ELEVATION_PMTILES_PATH ??
+  '/tiles/dev-elevation.pmtiles'
 const DEFAULT_ASSETS_PREFIX =
   import.meta.env.VITE_MAP_ASSETS_PREFIX ?? '/tiles/basemaps-assets'
 const DEFAULT_ATTRIBUTION_URL =
   import.meta.env.VITE_MAP_ATTRIBUTION_URL ??
   'https://www.openstreetmap.org/copyright'
+const DEFAULT_TERRAIN_ATTRIBUTION_URL = 'https://mapterhorn.com/attribution'
 
 export function getMapConfig(
   overrides: Partial<MapConfig> = {},
 ): MapConfig {
   return {
     pmtilesPath: overrides.pmtilesPath ?? DEFAULT_PMTILES_PATH,
+    elevationPmtilesPath:
+      overrides.elevationPmtilesPath ?? DEFAULT_ELEVATION_PMTILES_PATH,
     assetsPrefix: overrides.assetsPrefix ?? DEFAULT_ASSETS_PREFIX,
     attributionLabel: overrides.attributionLabel ?? '© OpenStreetMap',
     attributionUrl: overrides.attributionUrl ?? DEFAULT_ATTRIBUTION_URL,
+    terrainAttributionLabel: overrides.terrainAttributionLabel ?? '© Mapterhorn',
+    terrainAttributionUrl:
+      overrides.terrainAttributionUrl ?? DEFAULT_TERRAIN_ATTRIBUTION_URL,
     defaultCenter: overrides.defaultCenter ?? [-3.95, 53.05],
     defaultZoom: overrides.defaultZoom ?? 9,
   }

@@ -13,9 +13,9 @@ export function MapScreen() {
       </header>
       <main className="flex flex-1 flex-col p-4">
         <p className="mb-2 text-sm text-neutral-600">
-          Self-hosted Protomaps basemap (Britain and Ireland extract). Map
-          rendering is checked by hand; automated tests cover configuration and
-          credit only.
+          Self-hosted Protomaps basemap with optional hill shading and
+          Explorer-style contours from Mapterhorn elevation tiles. Map rendering
+          is checked by hand; automated tests cover toggles and credit.
         </p>
         <div className="flex-1 overflow-hidden rounded-lg border bg-white shadow-sm">
           <Map className="min-h-[480px]" />
