@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 
 import { fetchHealth } from '@/api/health'
 import { Button } from '@/components/ui/button'
@@ -37,13 +38,18 @@ export function HealthScreen() {
               <dd>{healthQuery.data.database}</dd>
             </dl>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => void healthQuery.refetch()}
-          >
-            Refresh
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void healthQuery.refetch()}
+            >
+              Refresh
+            </Button>
+            <Button asChild>
+              <Link to="/map">Open map</Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </main>
