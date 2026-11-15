@@ -5,7 +5,7 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 from app.config import settings
 from app.db import Base
-from app.models import GearLibraryItem, HealthProbe, LinkToken, Session, User  # noqa: F401
+from app.models import Day, GearLibraryItem, HealthProbe, LinkToken, Session, User  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:
