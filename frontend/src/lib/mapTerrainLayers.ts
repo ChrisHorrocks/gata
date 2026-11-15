@@ -3,6 +3,7 @@ import type { Map as MapLibreMap } from 'maplibre-gl'
 
 import type { MapConfig } from '@/config/map'
 import { CONTOUR_THRESHOLDS } from '@/lib/contourStyle'
+import { CONTOUR_LABEL_FONT } from '@/lib/mapTerrainLayerFonts'
 import { createElevationDemGetTile } from '@/lib/elevationDemGetTile'
 import {
   elevationDemTilePattern,
@@ -113,7 +114,7 @@ function addTerrainLayerDefinitions(map: MapLibreMap): void {
           ['number-format', ['get', 'ele'], { 'max-fraction-digits': 0 }],
           'm',
         ],
-        'text-font': ['Noto Sans Bold'],
+        'text-font': CONTOUR_LABEL_FONT,
       },
       paint: {
         'text-color': '#4a3f35',

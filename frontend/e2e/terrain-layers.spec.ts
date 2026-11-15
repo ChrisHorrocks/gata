@@ -5,21 +5,29 @@ const artifactsDir = '/opt/cursor/artifacts'
 
 type TerrainConsoleWatch = {
   consoleErrors: string[]
+  consoleWarnings: string[]
   pageErrors: string[]
   failedUrls: string[]
+  font404Urls: string[]
   elevationRangeResponses: number
 }
+
+const SNOWDONIA_CENTER: [number, number] = [-3.95, 53.05]
 
 function watchTerrainConsole(page: import('@playwright/test').Page): TerrainConsoleWatch {
   const watch: TerrainConsoleWatch = {
     consoleErrors: [],
+    consoleWarnings: [],
     pageErrors: [],
     failedUrls: [],
+    font404Urls: [],
     elevationRangeResponses: 0,
   }
 
   page.on('console', (msg) => {
-    if (msg.type() === 'error') watch.consoleErrors.push(msg.text())
+    const text = msg.text()
+    if (msg.type() === 'error') watch.consoleErrors.push(text)
+    if (msg.type() === 'warning') watch.consoleWarnings.push(text)
   })
   page.on('pageerror', (err) => {
     watch.pageErrors.push(err.message)
@@ -33,6 +41,9 @@ function watchTerrainConsole(page: import('@playwright/test').Page): TerrainCons
       res.status() === 206
     ) {
       watch.elevationRangeResponses += 1
+    }
+    if (res.status() === 404 && /basemaps-assets\/fonts\//i.test(res.url())) {
+      watch.font404Urls.push(res.url())
     }
   })
 
@@ -71,6 +82,83 @@ function assertNoDemTileProblems(watch: TerrainConsoleWatch): void {
     demFailures,
     `unexpected failed DEM requests: ${demFailures.join('\n')}`,
   ).toEqual([])
+}
+
+function assertNoContourGlyphOrMeshWarnings(watch: TerrainConsoleWatch): void {
+  expect(
+    watch.font404Urls,
+    `font glyph 404s: ${watch.font404Urls.join('\n')}`,
+  ).toEqual([])
+
+  const glyphErrors = watch.consoleErrors.filter((line) =>
+    /Unable to load glyph range/i.test(line),
+  )
+  expect(
+    glyphErrors,
+    `glyph load console errors: ${glyphErrors.join('\n')}`,
+  ).toEqual([])
+
+  const vertexWarnings = [
+    ...watch.consoleWarnings,
+    ...watch.consoleErrors,
+  ].filter((line) => /Max vertices per segment/i.test(line))
+  expect(
+    vertexWarnings,
+    `MapLibre vertex warnings: ${vertexWarnings.join('\n')}`,
+  ).toEqual([])
+}
+
+async function exerciseSnowdoniaZoomRange(
+  page: import('@playwright/test').Page,
+  watch: TerrainConsoleWatch,
+): Promise<void> {
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(() => Boolean((window as Window & { __gataMap?: unknown }).__gataMap)),
+      { timeout: 30_000 },
+    )
+    .toBe(true)
+
+  for (let zoom = 9; zoom <= 15; zoom += 1) {
+    const warningsBefore = watch.consoleWarnings.length
+    const errorsBefore = watch.consoleErrors.length
+    await page.evaluate(
+      ({ center, z }) => {
+        const map = (window as Window & { __gataMap?: { setCenter: (c: [number, number]) => void; setZoom: (n: number) => void } })
+          .__gataMap
+        map?.setCenter(center)
+        map?.setZoom(z)
+      },
+      { center: SNOWDONIA_CENTER, z: zoom },
+    )
+    await page.evaluate(
+      (ms) =>
+        new Promise<void>((resolve) => {
+          const map = (window as Window & { __gataMap?: { once: (e: string, fn: () => void) => void } })
+            .__gataMap
+          if (!map) {
+            resolve()
+            return
+          }
+          const timer = window.setTimeout(resolve, ms)
+          map.once('idle', () => {
+            window.clearTimeout(timer)
+            resolve()
+          })
+        }),
+      8_000,
+    )
+    const newWarnings = [
+      ...watch.consoleWarnings.slice(warningsBefore),
+      ...watch.consoleErrors.slice(errorsBefore),
+    ].filter((line) => /Max vertices per segment/i.test(line))
+    if (newWarnings.length > 0) {
+      throw new Error(
+        `vertex warning at zoom ${zoom}: ${newWarnings.join('; ')}`,
+      )
+    }
+  }
 }
 
 /** Drag the map west so tiles outside the dev Snowdonia elevation bbox are requested. */
@@ -112,6 +200,36 @@ test.describe('terrain layers', () => {
       .toBeGreaterThanOrEqual(2)
 
     assertNoDemTileProblems(watch)
+
+    await page.getByRole('checkbox', { name: 'Hill shading' }).uncheck()
+    await page.getByRole('checkbox', { name: 'Contour lines' }).uncheck()
+    await page.waitForTimeout(800)
+    await page.getByRole('checkbox', { name: 'Contour lines' }).check()
+    await expect(page.getByRole('checkbox', { name: 'Contour lines' })).toBeChecked()
+    await page.evaluate(
+      (ms) =>
+        new Promise<void>((resolve) => {
+          const map = (window as Window & { __gataMap?: { once: (e: string, fn: () => void) => void } })
+            .__gataMap
+          if (!map) {
+            resolve()
+            return
+          }
+          const timer = window.setTimeout(resolve, ms)
+          map.once('idle', () => {
+            window.clearTimeout(timer)
+            resolve()
+          })
+        }),
+      8_000,
+    )
+
+    watch.consoleWarnings = []
+    watch.consoleErrors = []
+    watch.font404Urls = []
+
+    await exerciseSnowdoniaZoomRange(page, watch)
+    assertNoContourGlyphOrMeshWarnings(watch)
 
     const screenshotPath = path.join(
       artifactsDir,

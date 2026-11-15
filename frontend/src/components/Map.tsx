@@ -69,6 +69,9 @@ export function Map({ className, config: configProp }: MapProps) {
       terrainReadyRef.current = true
       syncTerrainLayers(map, readTerrainLayerPrefs())
       map.resize()
+      if (import.meta.env.VITE_E2E_MAP_HOOK === '1') {
+        ;(window as Window & { __gataMap?: maplibregl.Map }).__gataMap = map
+      }
     })
     mapRef.current = map
 

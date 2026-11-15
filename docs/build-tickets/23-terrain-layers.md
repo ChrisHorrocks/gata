@@ -21,9 +21,10 @@ Parent: #11. Issue: #23.
 
 | Setting | Choice | Notes |
 | ------- | ------ | ----- |
-| Minor interval | 10 m | From z10 through z15 |
+| Minor interval | 10 m | z12–z15 |
 | Index (major) interval | 50 m | Bold line + elevation label (`level > 0` in maplibre-contour) |
-| Low zoom (z9) | 50 m only | Avoid clutter when overzooming coarse DEM |
+| Mid zoom (z10–11) | 50 m / 250 m | Coarser spacing so contour meshes stay under MapLibre’s per-segment vertex cap |
+| Low zoom (z9) | 100 m only | Avoid oversized line buckets when the dev bbox fits a single tile |
 | 5 m supplementary | **Not used** | Dropped after review: 30 m source DEM makes 5 m lines visually noisy |
 
 Line paint: 0.6 px minor, 1.25 px major; `#6b5b4a` lines; labels `11px` with white halo.
