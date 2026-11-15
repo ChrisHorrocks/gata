@@ -32,6 +32,7 @@ export function Map({ className, config: configProp }: MapProps) {
     () => configProp ?? getMapConfig(),
     [configProp],
   )
+  const shellRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const terrainReadyRef = useRef(false)
@@ -72,7 +73,16 @@ export function Map({ className, config: configProp }: MapProps) {
     })
     mapRef.current = map
 
+    const shell = shellRef.current
+    const resizeObserver =
+      shell &&
+      new ResizeObserver(() => {
+        map.resize()
+      })
+    if (resizeObserver && shell) resizeObserver.observe(shell)
+
     return () => {
+      resizeObserver?.disconnect()
       terrainReadyRef.current = false
       map.remove()
       mapRef.current = null
@@ -87,10 +97,13 @@ export function Map({ className, config: configProp }: MapProps) {
   }, [terrainPrefs, syncTerrainLayers])
 
   return (
-    <div className={cn('relative h-full min-h-[320px] w-full', className)}>
+    <div
+      ref={shellRef}
+      className={cn('relative h-full min-h-0 w-full', className)}
+    >
       <div
         ref={containerRef}
-        className="h-full w-full"
+        className="absolute inset-0 min-h-0 min-w-0 [&_.maplibregl-canvas]:block"
         data-testid="maplibre-container"
         aria-label="Trip map"
       />
