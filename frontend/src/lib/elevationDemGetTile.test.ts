@@ -5,6 +5,7 @@ import {
   parseElevationDemTileUrl,
   resetElevationDemArchivesForTests,
 } from '@/lib/elevationDemGetTile'
+import { flatTerrariumDemTileBlob } from '@/lib/flatTerrariumDemTile'
 
 const getZxy = vi.fn()
 
@@ -44,6 +45,37 @@ describe('createElevationDemGetTile', () => {
     expect(getZxy).toHaveBeenCalledWith(9, 250, 166, abort.signal)
     expect(result.data).toBeInstanceOf(Blob)
     expect(result.data.size).toBe(bytes.byteLength)
+  })
+
+  it('returns flat sea-level tile when the archive has no tile', async () => {
+    getZxy.mockResolvedValue(undefined)
+
+    const getTile = createElevationDemGetTile(
+      'http://localhost:5173/tiles/dev-elevation.pmtiles',
+    )
+    const result = await getTile(
+      'http://localhost:5173/tiles/dev-elevation.pmtiles/9/249/166.webp',
+      new AbortController(),
+    )
+
+    expect(getZxy).toHaveBeenCalledWith(9, 249, 166, expect.any(AbortSignal))
+    const flat = flatTerrariumDemTileBlob()
+    expect(result.data).toBe(flat)
+    expect(result.data.size).toBeGreaterThan(0)
+  })
+
+  it('propagates PMTiles errors such as network failures', async () => {
+    getZxy.mockRejectedValue(new Error('fetch failed'))
+
+    const getTile = createElevationDemGetTile(
+      'http://localhost:5173/tiles/dev-elevation.pmtiles',
+    )
+    await expect(
+      getTile(
+        'http://localhost:5173/tiles/dev-elevation.pmtiles/9/249/166.webp',
+        new AbortController(),
+      ),
+    ).rejects.toThrow(/fetch failed/)
   })
 
   it('rejects malformed tile URLs', async () => {
