@@ -1,7 +1,5 @@
 from datetime import timedelta
 
-SESSION_COOKIE_NAME = "__Host-gata-session"
-CSRF_COOKIE_NAME = "__Host-gata-csrf"
 CSRF_HEADER_NAME = "X-CSRF-Token"
 
 MAGIC_TOKEN_TYP = "gata-magic+jwt"

@@ -11,13 +11,12 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.auth.constants import (
-    CSRF_COOKIE_NAME,
     MAGIC_LINK_RATE_LIMIT_PER_EMAIL,
     MAGIC_LINK_RATE_LIMIT_PER_IP,
     MAGIC_LINK_RATE_LIMIT_WINDOW,
     MAGIC_LINK_RESPONSE_MESSAGE,
-    SESSION_COOKIE_NAME,
 )
+from app.auth.cookie_policy import get_cookie_policy
 from app.auth.csrf import issue_csrf_token
 from app.auth.keys import load_signing_keyset
 from app.auth.magic import issue_magic_link
@@ -87,7 +86,7 @@ def _sign_in(client: TestClient, mail_capture, email: str) -> str:
         headers=safe_write_headers(),
     )
     assert consume.status_code == 200
-    csrf = client.cookies.get(CSRF_COOKIE_NAME)
+    csrf = client.cookies.get(get_cookie_policy().csrf_name)
     assert csrf
     return str(csrf)
 
@@ -122,9 +121,10 @@ def test_csrf_from_other_session_rejected(
     db_session.commit()
     session_row, verifier_b = create_session(db_session, user_id=other_user.id)
     other_csrf = issue_csrf_token(session_row.id, verifier_b)
-    assert other_csrf != api_client.cookies.get(CSRF_COOKIE_NAME)
+    policy = get_cookie_policy()
+    assert other_csrf != api_client.cookies.get(policy.csrf_name)
 
-    api_client.cookies.set(CSRF_COOKIE_NAME, other_csrf)
+    api_client.cookies.set(policy.csrf_name, other_csrf)
     response = api_client.post(
         "/api/v1/session/logout",
         headers=safe_write_headers(csrf_token=other_csrf),
@@ -144,7 +144,7 @@ def test_logout_succeeds_with_valid_csrf(api_client: TestClient, mail_capture) -
 
 def test_consume_sets_csrf_cookie(api_client: TestClient, mail_capture) -> None:
     csrf = _sign_in(api_client, mail_capture, "cookiecsrf@example.com")
-    session_cookie = api_client.cookies.get(SESSION_COOKIE_NAME)
+    session_cookie = api_client.cookies.get(get_cookie_policy().session_name)
     assert session_cookie
     session_id, verifier = str(session_cookie).split(".", 1)
     expected = issue_csrf_token(session_id, verifier)
