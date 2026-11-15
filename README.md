@@ -15,7 +15,14 @@ docker compose up --build
 | Mailpit   | http://localhost:8025 |
 | Postgres  | `localhost:5432` (user/password/db: `gata`) |
 
-The Vite dev server proxies `/api` to the API so the browser stays on a single origin. Open the SPA to see `GET /api/v1/health` read from Postgres.
+The Vite dev server proxies `/api` to the API so the browser stays on a single origin. Open the SPA to see `GET /api/v1/health` read from Postgres (at `/health`).
+
+### Try magic-link sign-in
+
+1. With the stack running, open http://localhost:5173/sign-in.
+2. Enter your email and submit. Open Mailpit at http://localhost:8025 and open the sign-in message.
+3. Follow the link to the “Sign in as …?” page, then click **Sign in**.
+4. Visit http://localhost:5173/trips to confirm you are signed in, or sign out from that screen.
 
 Copy `.env.example` to `.env` only when overriding defaults for non-Compose runs.
 
