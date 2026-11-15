@@ -175,7 +175,7 @@ describe('ItineraryScreen', () => {
     await waitFor(() => {
       expect(screen.getByText(/trip totals: 10 km/i)).toBeInTheDocument()
     })
-    expect(screen.getByLabelText(/distance in km for day 1/i)).toHaveValue(10)
+    expect(screen.getByLabelText(/^distance \(km\)$/i)).toHaveValue(10)
 
     await user.click(screen.getByRole('button', { name: /^save$/i }))
 
@@ -184,7 +184,7 @@ describe('ItineraryScreen', () => {
     })
     await user.click(screen.getByRole('button', { name: /reload/i }))
     await waitFor(() => {
-      expect(screen.getByLabelText(/distance in km for day 1/i)).toHaveValue(11)
+      expect(screen.getByLabelText(/^distance \(km\)$/i)).toHaveValue(11)
     })
   })
 })

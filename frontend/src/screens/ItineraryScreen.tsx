@@ -201,110 +201,178 @@ function DayRow({
     },
   })
 
-  const metricsDisabled = draft.kind === 'rest'
   const errorId = fieldError ? `day-${day.id}-error` : undefined
+  const dayLabel = `Day ${index + 1}`
 
   return (
     <>
-      <tr
-        className={`border-b border-border align-top ${selected ? 'bg-muted/40' : ''}`}
+      <article
+        aria-labelledby={`day-${day.id}-heading`}
+        aria-current={selected ? 'true' : undefined}
         onClick={onSelect}
+        className={`cursor-pointer rounded-md border p-3 transition-colors ${
+          selected
+            ? 'border-primary bg-muted/40 ring-2 ring-primary/20'
+            : 'border-border hover:bg-muted/20'
+        }`}
       >
-        <th scope="row" className="px-2 py-3 text-left font-medium sm:px-3">
-          <span className="block text-xs text-muted-foreground">Day {index + 1}</span>
-          <time dateTime={day.date}>{day.date}</time>
-        </th>
-        <td className="px-2 py-3 sm:px-3">
-          <label className="sr-only" htmlFor={`kind-${day.id}`}>
-            Day type
-          </label>
-          <select
-            id={`kind-${day.id}`}
-            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-            value={draft.kind}
+        <header id={`day-${day.id}-heading`} className="mb-3">
+          <span className="block text-xs text-muted-foreground">{dayLabel}</span>
+          <time className="font-medium" dateTime={day.date}>
+            {day.date}
+          </time>
+        </header>
+
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-end gap-3" onClick={(event) => event.stopPropagation()}>
+            <div className="min-w-[5.5rem] shrink-0">
+              <label className="mb-1 block text-xs text-muted-foreground" htmlFor={`kind-${day.id}`}>
+                Type
+              </label>
+              <select
+                id={`kind-${day.id}`}
+                className="w-full min-w-[5.5rem] rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                value={draft.kind}
+                onChange={(event) => {
+                  const kind = event.target.value as DayKind
+                  onDraftChange({
+                    ...draft,
+                    kind,
+                    ...(kind === 'rest'
+                      ? { distanceKm: '', ascentM: '', descentM: '' }
+                      : {
+                          distanceKm: draft.distanceKm || '0',
+                          ascentM: draft.ascentM || '0',
+                        }),
+                  })
+                  setFieldError(null)
+                }}
+              >
+                <option value="walking">Walking</option>
+                <option value="rest">Rest</option>
+              </select>
+            </div>
+            {draft.kind === 'rest' ? (
+              <p className="pb-1 text-sm text-muted-foreground">Rest day</p>
+            ) : (
+              <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-3">
+                <div className="min-w-0">
+                  <label
+                    className="mb-1 block text-xs text-muted-foreground"
+                    htmlFor={`distance-${day.id}`}
+                  >
+                    Distance (km)
+                  </label>
+                  <input
+                    id={`distance-${day.id}`}
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="0.1"
+                    className="w-full min-w-0 rounded-md border border-input bg-background px-2 py-1.5 text-sm user-invalid:border-destructive"
+                    value={draft.distanceKm}
+                    onChange={(event) => {
+                      onDraftChange({ ...draft, distanceKm: event.target.value })
+                      setFieldError(null)
+                    }}
+                    aria-invalid={fieldError ? true : undefined}
+                    aria-describedby={errorId}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label
+                    className="mb-1 block text-xs text-muted-foreground"
+                    htmlFor={`ascent-${day.id}`}
+                  >
+                    Ascent (m)
+                  </label>
+                  <input
+                    id={`ascent-${day.id}`}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={1}
+                    className="w-full min-w-0 rounded-md border border-input bg-background px-2 py-1.5 text-sm user-invalid:border-destructive"
+                    value={draft.ascentM}
+                    onChange={(event) => {
+                      onDraftChange({ ...draft, ascentM: event.target.value })
+                      setFieldError(null)
+                    }}
+                    aria-invalid={fieldError ? true : undefined}
+                    aria-describedby={errorId}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label
+                    className="mb-1 block text-xs text-muted-foreground"
+                    htmlFor={`descent-${day.id}`}
+                  >
+                    Descent (m)
+                  </label>
+                  <input
+                    id={`descent-${day.id}`}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={1}
+                    className="w-full min-w-0 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                    value={draft.descentM}
+                    onChange={(event) => {
+                      onDraftChange({ ...draft, descentM: event.target.value })
+                      setFieldError(null)
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {selected && (
+            <div
+              className="space-y-2 rounded-md border border-border bg-card/80 p-3"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <p className="text-xs text-muted-foreground">
+                {day.kind === 'walking'
+                  ? effectiveCamp
+                    ? `Camp pin ${effectiveCamp.pin_number} · ${effectiveCamp.name}`
+                    : 'Click the map to place tonight’s camp.'
+                  : effectiveCamp
+                    ? `Stays at camp pin ${effectiveCamp.pin_number} (${effectiveCamp.name}).`
+                    : 'No camp yet from a previous walking day.'}
+              </p>
+              {day.kind === 'walking' && effectiveCamp && (
+                <>
+                  <label className="block text-xs text-muted-foreground" htmlFor={`camp-notes-${day.id}`}>
+                    Camp notes
+                  </label>
+                  <textarea
+                    id={`camp-notes-${day.id}`}
+                    rows={2}
+                    className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                    value={campNotes}
+                    onChange={(event) => onCampNotesChange(event.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={campNotesPending}
+                    onClick={() => onSaveCampNotes()}
+                  >
+                    Save camp notes
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
+          <div
+            role="group"
+            aria-label={`Actions for ${dayLabel.toLowerCase()}`}
+            className="flex flex-wrap items-center gap-2 border-t border-border pt-3"
             onClick={(event) => event.stopPropagation()}
-            onChange={(event) => {
-              const kind = event.target.value as DayKind
-              onDraftChange({
-                ...draft,
-                kind,
-                ...(kind === 'rest'
-                  ? { distanceKm: '', ascentM: '', descentM: '' }
-                  : {
-                      distanceKm: draft.distanceKm || '0',
-                      ascentM: draft.ascentM || '0',
-                    }),
-              })
-              setFieldError(null)
-            }}
           >
-            <option value="walking">Walking</option>
-            <option value="rest">Rest</option>
-          </select>
-        </td>
-        <td className="hidden px-2 py-3 sm:table-cell sm:px-3">
-          <label className="sr-only" htmlFor={`distance-${day.id}`}>
-            Distance (km)
-          </label>
-          <input
-            id={`distance-${day.id}`}
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step="0.1"
-            disabled={metricsDisabled}
-            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm user-invalid:border-destructive disabled:opacity-50"
-            value={metricsDisabled ? '' : draft.distanceKm}
-            onChange={(event) => {
-              onDraftChange({ ...draft, distanceKm: event.target.value })
-              setFieldError(null)
-            }}
-            aria-invalid={fieldError ? true : undefined}
-            aria-describedby={errorId}
-          />
-        </td>
-        <td className="hidden px-2 py-3 md:table-cell md:px-3">
-          <label className="sr-only" htmlFor={`ascent-${day.id}`}>
-            Ascent (m)
-          </label>
-          <input
-            id={`ascent-${day.id}`}
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
-            disabled={metricsDisabled}
-            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm user-invalid:border-destructive disabled:opacity-50"
-            value={metricsDisabled ? '' : draft.ascentM}
-            onChange={(event) => {
-              onDraftChange({ ...draft, ascentM: event.target.value })
-              setFieldError(null)
-            }}
-            aria-invalid={fieldError ? true : undefined}
-            aria-describedby={errorId}
-          />
-        </td>
-        <td className="hidden px-2 py-3 lg:table-cell lg:px-3">
-          <label className="sr-only" htmlFor={`descent-${day.id}`}>
-            Descent (m, optional)
-          </label>
-          <input
-            id={`descent-${day.id}`}
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
-            disabled={metricsDisabled}
-            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm user-invalid:border-destructive disabled:opacity-50"
-            value={metricsDisabled ? '' : draft.descentM}
-            onChange={(event) => {
-              onDraftChange({ ...draft, descentM: event.target.value })
-              setFieldError(null)
-            }}
-          />
-        </td>
-        <td className="px-2 py-3 sm:px-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Button
               type="button"
               size="sm"
@@ -313,7 +381,7 @@ function DayRow({
             >
               Save
             </Button>
-            <div className="flex gap-1">
+            <div role="group" aria-label={`Reorder ${dayLabel.toLowerCase()}`} className="flex gap-1">
               <Button
                 type="button"
                 size="sm"
@@ -345,78 +413,13 @@ function DayRow({
               Delete
             </Button>
           </div>
-          <h4 className="mt-2 text-xs font-medium text-muted-foreground sm:hidden">Walking stats</h4>
-          <div className="mt-1 grid gap-2 sm:hidden">
-            <input
-              aria-label={`Distance in km for day ${index + 1}`}
-              type="number"
-              inputMode="decimal"
-              min={0}
-              step="0.1"
-              disabled={metricsDisabled}
-              className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm disabled:opacity-50"
-              value={metricsDisabled ? '' : draft.distanceKm}
-              onChange={(event) => onDraftChange({ ...draft, distanceKm: event.target.value })}
-            />
-            <input
-              aria-label={`Ascent in metres for day ${index + 1}`}
-              type="number"
-              inputMode="numeric"
-              min={0}
-              disabled={metricsDisabled}
-              className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm disabled:opacity-50"
-              value={metricsDisabled ? '' : draft.ascentM}
-              onChange={(event) => onDraftChange({ ...draft, ascentM: event.target.value })}
-            />
-          </div>
           {fieldError && (
-            <p id={errorId} className="mt-2 text-sm text-destructive" role="alert">
+            <p id={errorId} className="text-sm text-destructive" role="alert">
               {fieldError}
             </p>
           )}
-          {selected && (
-            <div className="mt-3 text-left">
-              <p className="text-xs text-muted-foreground">
-                {day.kind === 'walking'
-                  ? effectiveCamp
-                    ? `Camp pin ${effectiveCamp.pin_number} · ${effectiveCamp.name}`
-                    : 'Click the map to place tonight’s camp.'
-                  : effectiveCamp
-                    ? `Stays at camp pin ${effectiveCamp.pin_number} (${effectiveCamp.name}).`
-                    : 'No camp yet from a previous walking day.'}
-              </p>
-              {day.kind === 'walking' && effectiveCamp && (
-                <>
-                  <label className="mt-2 block text-xs font-medium" htmlFor={`camp-notes-${day.id}`}>
-                    Camp notes
-                  </label>
-                  <textarea
-                    id={`camp-notes-${day.id}`}
-                    rows={2}
-                    className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-                    value={campNotes}
-                    onClick={(event) => event.stopPropagation()}
-                    onChange={(event) => onCampNotesChange(event.target.value)}
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="mt-2"
-                    disabled={campNotesPending}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      onSaveCampNotes()
-                    }}
-                  >
-                    Save camp notes
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
-        </td>
-      </tr>
+        </div>
+      </article>
       {showDelete &&
         createPortal(
           <ConfirmDialog
@@ -442,6 +445,7 @@ export function ItineraryScreen() {
   const [flyToToken, setFlyToToken] = useState(0)
   const [showConflict, setShowConflict] = useState(false)
   const [conflictError, setConflictError] = useState<ApiError | null>(null)
+  const [conflictResourceLabel, setConflictResourceLabel] = useState('itinerary')
 
   const tripQuery = useQuery({
     queryKey: ['trip', tripId],
@@ -510,7 +514,8 @@ export function ItineraryScreen() {
     },
   })
 
-  const handleConflict = useCallback((error: unknown) => {
+  const handleConflict = useCallback((error: unknown, resourceLabel: 'itinerary' | 'camp') => {
+    setConflictResourceLabel(resourceLabel)
     if (error instanceof ApiError) {
       setConflictError(error)
     }
@@ -551,7 +556,7 @@ export function ItineraryScreen() {
     },
     onError: (error) => {
       if (isVersionConflict(error)) {
-        handleConflict(error)
+        handleConflict(error, 'camp')
       }
     },
   })
@@ -569,7 +574,7 @@ export function ItineraryScreen() {
     },
     onError: (error) => {
       if (isVersionConflict(error)) {
-        handleConflict(error)
+        handleConflict(error, 'camp')
       }
     },
   })
@@ -644,10 +649,10 @@ export function ItineraryScreen() {
         </CardContent>
       </Card>
 
-      <div className="grid min-h-0 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-stretch">
+      <div className="grid min-h-0 gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] md:items-stretch">
         <section
           aria-label="Itinerary map pane"
-          className="relative min-h-72 overflow-hidden rounded-lg border border-border bg-card lg:min-h-[32rem]"
+          className="relative min-h-72 overflow-hidden rounded-lg border border-border bg-card md:min-h-[32rem]"
         >
           <div className="flex h-full min-h-0 flex-col p-2">
             <p className="mb-2 shrink-0 text-xs text-muted-foreground">
@@ -695,83 +700,58 @@ export function ItineraryScreen() {
           )}
 
           {daysQuery.isSuccess && daysQuery.data.days.length > 0 && (
-            <div className="overflow-x-auto rounded-md border border-border">
-              <table className="w-full min-w-[36rem] border-collapse text-sm">
-                <thead className="sticky top-0 z-10 bg-card">
-                  <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                    <th scope="col" className="px-3 py-2 font-medium">
-                      Date
-                    </th>
-                    <th scope="col" className="px-3 py-2 font-medium">
-                      Type
-                    </th>
-                    <th scope="col" className="hidden px-3 py-2 font-medium sm:table-cell">
-                      Distance (km)
-                    </th>
-                    <th scope="col" className="hidden px-3 py-2 font-medium md:table-cell">
-                      Ascent (m)
-                    </th>
-                    <th scope="col" className="hidden px-3 py-2 font-medium lg:table-cell">
-                      Descent (m)
-                    </th>
-                    <th scope="col" className="px-3 py-2 font-medium">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="motion-safe:transition-[transform] motion-reduce:transition-none">
-                  {daysQuery.data.days.map((day, index) => {
-                    const draft = drafts[day.id] ?? rowFromDay(day)
-                    const effectiveCamp = effectiveCampForDay(daysQuery.data.days, camps, day.id)
-                    const selected = (selectedDay?.id ?? daysQuery.data.days[0]?.id) === day.id
-                    const campNotes =
-                      campNoteDrafts[day.id] ?? effectiveCamp?.notes ?? ''
-                    return (
-                      <DayRow
-                        key={day.id}
-                        day={day}
-                        draft={draft}
-                        tripId={tripId}
-                        index={index}
-                        dayCount={daysQuery.data.days.length}
-                        pending={pending}
-                        selected={selected}
-                        effectiveCamp={effectiveCamp}
-                        campNotes={campNotes}
-                        campNotesPending={campNotesMutation.isPending}
-                        onSelect={() => {
-                          setSelectedDayId(day.id)
-                          setFlyToToken((value) => value + 1)
-                        }}
-                        onCampNotesChange={(value) =>
-                          setCampNoteDrafts((previous) => ({ ...previous, [day.id]: value }))
+            <ul className="flex list-none flex-col gap-3 p-0 motion-safe:transition-[transform] motion-reduce:transition-none">
+              {daysQuery.data.days.map((day, index) => {
+                const draft = drafts[day.id] ?? rowFromDay(day)
+                const effectiveCamp = effectiveCampForDay(daysQuery.data.days, camps, day.id)
+                const selected = (selectedDay?.id ?? daysQuery.data.days[0]?.id) === day.id
+                const campNotes = campNoteDrafts[day.id] ?? effectiveCamp?.notes ?? ''
+                return (
+                  <li key={day.id}>
+                    <DayRow
+                      day={day}
+                      draft={draft}
+                      tripId={tripId}
+                      index={index}
+                      dayCount={daysQuery.data.days.length}
+                      pending={pending}
+                      selected={selected}
+                      effectiveCamp={effectiveCamp}
+                      campNotes={campNotes}
+                      campNotesPending={campNotesMutation.isPending}
+                      onSelect={() => {
+                        setSelectedDayId(day.id)
+                        setFlyToToken((value) => value + 1)
+                      }}
+                      onCampNotesChange={(value) =>
+                        setCampNoteDrafts((previous) => ({ ...previous, [day.id]: value }))
+                      }
+                      onSaveCampNotes={() => {
+                        const camp = campByDayId(camps).get(day.id)
+                        if (!camp) {
+                          return
                         }
-                        onSaveCampNotes={() => {
-                          const camp = campByDayId(camps).get(day.id)
-                          if (!camp) {
-                            return
-                          }
-                          campNotesMutation.mutate({ camp, notes: campNotes })
-                        }}
-                        onDraftChange={(next) =>
-                          setDrafts((previous) => ({ ...previous, [day.id]: next }))
-                        }
-                        onSaved={clearDraft}
-                        onDeleted={() => clearDraft(day.id)}
-                        onReordered={applyList}
-                        onConflict={handleConflict}
-                      />
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        campNotesMutation.mutate({ camp, notes: campNotes })
+                      }}
+                      onDraftChange={(next) =>
+                        setDrafts((previous) => ({ ...previous, [day.id]: next }))
+                      }
+                      onSaved={clearDraft}
+                      onDeleted={() => clearDraft(day.id)}
+                      onReordered={applyList}
+                      onConflict={(error) => handleConflict(error, 'itinerary')}
+                    />
+                  </li>
+                )
+              })}
+            </ul>
           )}
         </section>
       </div>
 
       <VersionConflictDialog
         open={showConflict}
+        resourceLabel={conflictResourceLabel}
         onReload={() => {
           void reloadFromServer()
         }}

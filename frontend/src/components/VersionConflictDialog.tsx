@@ -6,10 +6,17 @@ type VersionConflictDialogProps = {
   open: boolean
   onReload: () => void
   onDismiss: () => void
+  /** Noun phrase after "latest", e.g. "trip details" or "itinerary". */
+  resourceLabel?: string
 }
 
 /** Shown when a versioned save returns 409. Reload applies the server's current row. */
-export function VersionConflictDialog({ open, onReload, onDismiss }: VersionConflictDialogProps) {
+export function VersionConflictDialog({
+  open,
+  onReload,
+  onDismiss,
+  resourceLabel = 'trip details',
+}: VersionConflictDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -39,7 +46,7 @@ export function VersionConflictDialog({ open, onReload, onDismiss }: VersionConf
           Someone else saved first
         </h2>
         <p id="version-conflict-desc" className="text-sm text-muted-foreground">
-          Your edit was based on an older version. Reload to see the latest trip details, then try
+          Your edit was based on an older version. Reload to see the latest {resourceLabel}, then try
           your change again.
         </p>
         <div className="flex justify-end gap-2">
