@@ -6,7 +6,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from app.auth.constants import CSRF_COOKIE_NAME, CSRF_HEADER_NAME, SESSION_COOKIE_NAME
+from app.auth.constants import CSRF_HEADER_NAME
+from app.auth.cookie_policy import get_cookie_policy
 from app.auth.csrf import header_matches_cookie, verify_csrf_token
 from app.auth.fetch_metadata import fetch_metadata_rejects_request, is_state_changing_method
 from app.auth.sessions import parse_session_cookie
@@ -35,12 +36,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         if request.url.path in _CSRF_EXEMPT_PATHS:
             return await call_next(request)
 
-        session_cookie = request.cookies.get(SESSION_COOKIE_NAME)
+        policy = get_cookie_policy()
+        session_cookie = request.cookies.get(policy.session_name)
         parsed = parse_session_cookie(session_cookie)
         if parsed is not None:
             session_id, verifier = parsed
             header_token = request.headers.get(CSRF_HEADER_NAME)
-            cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+            cookie_token = request.cookies.get(policy.csrf_name)
             if not header_matches_cookie(header_token, cookie_token):
                 return JSONResponse(status_code=403, content={"detail": "CSRF check failed"})
             if not verify_csrf_token(session_id, verifier, header_token):

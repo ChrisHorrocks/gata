@@ -10,8 +10,21 @@ export class ApiError extends Error {
   }
 }
 
-const CSRF_COOKIE_NAME = '__Host-gata-csrf'
 const CSRF_HEADER_NAME = 'X-CSRF-Token'
+
+function csrfCookieName(): string {
+  if (typeof window === 'undefined') {
+    return '__Host-gata-csrf'
+  }
+  const { protocol, hostname } = window.location
+  if (protocol === 'https:') {
+    return '__Host-gata-csrf'
+  }
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'gata-csrf'
+  }
+  return '__Host-gata-csrf'
+}
 
 const STATE_CHANGING = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -36,7 +49,7 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
     headers['Content-Type'] = 'application/json'
   }
   if (STATE_CHANGING.has(method.toUpperCase())) {
-    const csrf = readCookie(CSRF_COOKIE_NAME)
+    const csrf = readCookie(csrfCookieName())
     if (csrf) {
       headers[CSRF_HEADER_NAME] = csrf
     }
@@ -61,5 +74,5 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
   return (await response.json()) as T
 }
 
-export const csrfCookieNameForTests = CSRF_COOKIE_NAME
+export const csrfCookieNameForTests = csrfCookieName()
 export const csrfHeaderNameForTests = CSRF_HEADER_NAME

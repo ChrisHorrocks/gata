@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Request, Response, status
 
-from app.auth.constants import SESSION_COOKIE_NAME
+from app.auth.cookie_policy import get_cookie_policy
 from app.auth.csrf import clear_csrf_cookie_kwargs
-from app.auth.sessions import revoke_from_cookie
+from app.auth.sessions import clear_session_cookie_kwargs, revoke_from_cookie
 from app.deps import CurrentUser, DbSession
 from app.schemas.auth import SessionResponse, UserResponse
 
@@ -18,12 +18,14 @@ def get_session(user: CurrentUser) -> SessionResponse:
 
 @router.post("/session/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout_session(request: Request, db: DbSession, response: Response) -> None:
-    revoke_from_cookie(db, cookie_value=request.cookies.get(SESSION_COOKIE_NAME))
+    policy = get_cookie_policy()
+    revoke_from_cookie(db, cookie_value=request.cookies.get(policy.session_name))
+    session_clear = clear_session_cookie_kwargs()
     response.delete_cookie(
-        key=SESSION_COOKIE_NAME,
-        path="/",
-        httponly=True,
-        secure=True,
+        key=str(session_clear["key"]),
+        path=str(session_clear["path"]),
+        httponly=bool(session_clear["httponly"]),
+        secure=bool(session_clear["secure"]),
         samesite="lax",
     )
     csrf_clear = clear_csrf_cookie_kwargs()

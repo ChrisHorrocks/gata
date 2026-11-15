@@ -5,7 +5,8 @@ import hmac
 import uuid
 from pathlib import Path
 
-from app.auth.constants import CSRF_COOKIE_NAME, CSRF_HEADER_NAME
+from app.auth.constants import CSRF_HEADER_NAME
+from app.auth.cookie_policy import get_cookie_policy
 from app.config import Settings, settings
 
 
@@ -50,22 +51,24 @@ def verify_csrf_token(session_id: str | uuid.UUID, verifier: str, token: str | N
 
 
 def csrf_cookie_kwargs(token: str) -> dict[str, object]:
+    policy = get_cookie_policy()
     return {
-        "key": CSRF_COOKIE_NAME,
+        "key": policy.csrf_name,
         "value": token,
         "path": "/",
-        "secure": True,
+        "secure": policy.secure,
         "samesite": "lax",
         "httponly": False,
     }
 
 
 def clear_csrf_cookie_kwargs() -> dict[str, object]:
+    policy = get_cookie_policy()
     return {
-        "key": CSRF_COOKIE_NAME,
+        "key": policy.csrf_name,
         "value": "",
         "path": "/",
-        "secure": True,
+        "secure": policy.secure,
         "samesite": "lax",
         "httponly": False,
         "max_age": 0,

@@ -8,11 +8,8 @@ from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
 
-from app.auth.constants import (
-    SESSION_ABSOLUTE_TTL,
-    SESSION_COOKIE_NAME,
-    SESSION_SLIDING_TTL,
-)
+from app.auth.constants import SESSION_ABSOLUTE_TTL, SESSION_SLIDING_TTL
+from app.auth.cookie_policy import get_cookie_policy
 from app.models.session import Session as SessionRow
 from app.models.user import User
 from app.time import clock
@@ -114,23 +111,25 @@ def revoke_from_cookie(db: Session, *, cookie_value: str | None) -> None:
 
 
 def session_cookie_kwargs(value: str) -> dict[str, object]:
+    policy = get_cookie_policy()
     return {
-        "key": SESSION_COOKIE_NAME,
+        "key": policy.session_name,
         "value": value,
         "path": "/",
         "httponly": True,
-        "secure": True,
+        "secure": policy.secure,
         "samesite": "lax",
     }
 
 
 def clear_session_cookie_kwargs() -> dict[str, object]:
+    policy = get_cookie_policy()
     return {
-        "key": SESSION_COOKIE_NAME,
+        "key": policy.session_name,
         "value": "",
         "path": "/",
         "httponly": True,
-        "secure": True,
+        "secure": policy.secure,
         "samesite": "lax",
         "max_age": 0,
     }

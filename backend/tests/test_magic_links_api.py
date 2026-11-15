@@ -13,13 +13,8 @@ from joserfc import jwt
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.auth.constants import (
-    CSRF_COOKIE_NAME,
-    MAGIC_TOKEN_TTL,
-    MAGIC_TOKEN_TYP,
-    SESSION_COOKIE_NAME,
-    SESSION_SLIDING_TTL,
-)
+from app.auth.constants import MAGIC_TOKEN_TTL, MAGIC_TOKEN_TYP, SESSION_SLIDING_TTL
+from app.auth.cookie_policy import get_cookie_policy
 from app.auth.keys import active_signing_key, load_signing_keyset
 from app.auth.magic import MagicTokenError, consume_magic_link, inspect_magic_link, issue_magic_link
 from app.auth.sessions import advance_session_times_for_tests
@@ -70,7 +65,8 @@ def _sign_in(client: TestClient, mail_capture, email: str) -> str:
 
 
 def _logout(client: TestClient) -> None:
-    csrf = client.cookies.get(CSRF_COOKIE_NAME)
+    policy = get_cookie_policy()
+    csrf = client.cookies.get(policy.csrf_name)
     assert csrf
     response = client.post(
         "/api/v1/session/logout",
@@ -248,6 +244,7 @@ def test_non_es256_rejected(api_client: TestClient, mail_capture) -> None:
 
 
 def test_session_cookie_flags(api_client: TestClient, mail_capture) -> None:
+    policy = get_cookie_policy()
     _request_link(api_client, "cookie@example.com")
     token = _extract_token_from_mail(mail_capture.messages[0].body)
     response = api_client.post(
@@ -257,10 +254,10 @@ def test_session_cookie_flags(api_client: TestClient, mail_capture) -> None:
     )
     assert response.status_code == 200
     header = response.headers.get("set-cookie", "")
-    assert SESSION_COOKIE_NAME in header
-    assert CSRF_COOKIE_NAME in header
+    assert policy.session_name in header
+    assert policy.csrf_name in header
     assert "httponly" in header.lower()
-    assert "secure" in header.lower()
+    assert ("secure" in header.lower()) == policy.secure
     assert "samesite=lax" in header.lower()
 
 
@@ -284,7 +281,7 @@ def test_session_sliding_expiry(
     anchor = clock.now()
     controllable_clock.freeze(anchor)
 
-    cookie_val = api_client.cookies.get(SESSION_COOKIE_NAME)
+    cookie_val = api_client.cookies.get(get_cookie_policy().session_name)
     assert cookie_val
     session_id = uuid.UUID(str(cookie_val).split(".", 1)[0])
 
@@ -308,7 +305,7 @@ def test_session_absolute_expiry(
     anchor = clock.now()
     controllable_clock.freeze(anchor)
 
-    cookie_val = api_client.cookies.get(SESSION_COOKIE_NAME)
+    cookie_val = api_client.cookies.get(get_cookie_policy().session_name)
     assert cookie_val
     session_id = uuid.UUID(str(cookie_val).split(".", 1)[0])
 

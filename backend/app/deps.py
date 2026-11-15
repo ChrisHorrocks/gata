@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException, Request, status
 from joserfc.jwk import KeySet
 from sqlalchemy.orm import Session
 
-from app.auth.constants import SESSION_COOKIE_NAME
+from app.auth.cookie_policy import get_cookie_policy
 from app.auth.keys import load_signing_keyset
 from app.auth.sessions import load_session
 from app.db import get_db
@@ -24,7 +24,7 @@ def get_signing_keyset() -> KeySet:
 
 
 def get_optional_user(request: Request, db: Session = Depends(get_db)) -> User | None:
-    session_cookie = request.cookies.get(SESSION_COOKIE_NAME)
+    session_cookie = request.cookies.get(get_cookie_policy().session_name)
     loaded = load_session(db, cookie_value=session_cookie, touch=True)
     if loaded is None:
         return None

@@ -17,7 +17,7 @@ describe('apiRequest', () => {
     )
     vi.stubGlobal('fetch', fetchMock)
 
-    document.cookie = `${csrfCookieNameForTests}=abc123; path=/; secure`
+    document.cookie = `${csrfCookieNameForTests}=abc123; path=/`
 
     await apiRequest('/api/v1/session/logout', { method: 'POST' })
 
@@ -42,7 +42,7 @@ describe('apiRequest', () => {
     )
     vi.stubGlobal('fetch', fetchMock)
 
-    document.cookie = `${csrfCookieNameForTests}=abc123; path=/; secure`
+    document.cookie = `${csrfCookieNameForTests}=abc123; path=/`
 
     await apiRequest('/api/v1/session')
 
