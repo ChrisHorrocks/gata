@@ -19,6 +19,7 @@ describe('map configuration', () => {
     expect(config.attributionUrl).toBe(
       'https://www.openstreetmap.org/copyright',
     )
+    expect(config.elevationPmtilesPath).toBe('/tiles/dev-elevation.pmtiles')
   })
 
   it('builds a Protomaps style with local assets and landcover off', () => {

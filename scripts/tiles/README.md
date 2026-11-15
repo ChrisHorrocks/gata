@@ -9,6 +9,20 @@ Self-hosted **Protomaps Basemap** PMTiles for Britain and Ireland (ADR 4). Tile 
 | `dev` | `tiles/data/dev-small.pmtiles` | A few MB |
 | `full` | `tiles/data/britain-ireland.pmtiles` | ~3.2 GB (z0–15) |
 
+### Elevation (Mapterhorn Terrarium, issue #23)
+
+| Profile | Output | Approximate size |
+| ------- | ------ | ---------------- |
+| `dev` | `tiles/data/dev-elevation.pmtiles` | A few MB |
+| `full` | `tiles/data/britain-ireland-elevation.pmtiles` | ~0.9 GB (z0–12, UK+Ireland) |
+
+```bash
+./scripts/tiles/fetch-elevation-tiles.sh dev
+# ./scripts/tiles/fetch-elevation-tiles.sh full
+```
+
+Source: `https://download.mapterhorn.com/planet.pmtiles` (Mapterhorn Terrarium WebP, 512 px tiles). Recorded sizes are written under `docs/build-tickets/` when you run the script.
+
 Allow extra temporary space during `full` extract (network fetch + rewrite). Monthly refresh: extract a new file, run `verify-tiles.sh`, replace the file on the tiles volume.
 
 ## Prerequisites

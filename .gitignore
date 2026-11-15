@@ -230,3 +230,4 @@ frontend/dist/
 tiles/data/*.pmtiles
 tiles/data/basemaps-assets/
 scripts/tiles/.bin/
+.bin/pmtiles

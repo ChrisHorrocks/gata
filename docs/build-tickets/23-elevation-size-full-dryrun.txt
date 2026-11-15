@@ -1,0 +1,3 @@
+full extract dry-run 2026-11-15: planet.pmtiles bbox=-10.854492,49.882893,1.912842,60.909393 maxzoom=12
+archive size (estimated): 916 MB (958 MB transferred with 0.05 overfetch)
+source: https://download.mapterhorn.com/planet.pmtiles

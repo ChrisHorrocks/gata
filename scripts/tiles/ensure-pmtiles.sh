@@ -17,7 +17,8 @@ case "$ARCH" in
 esac
 
 if command -v pmtiles >/dev/null 2>&1; then
-	exit 0
+	# shellcheck disable=SC2310
+	return 0 2>/dev/null || exit 0
 fi
 
 mkdir -p "$BIN_DIR"
@@ -25,7 +26,8 @@ TARGET="$BIN_DIR/pmtiles"
 
 if [[ -x "$TARGET" ]]; then
 	export PATH="$BIN_DIR:$PATH"
-	exit 0
+	# shellcheck disable=SC2310
+	return 0 2>/dev/null || exit 0
 fi
 
 case "$OS" in

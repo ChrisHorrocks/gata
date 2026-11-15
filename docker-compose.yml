@@ -57,6 +57,7 @@ services:
       VITE_API_PROXY_TARGET: http://backend:8000
       VITE_TILES_PROXY_TARGET: http://caddy:8080
       VITE_MAP_PMTILES_PATH: /tiles/dev-small.pmtiles
+      VITE_MAP_ELEVATION_PMTILES_PATH: /tiles/dev-elevation.pmtiles
       VITE_MAP_ASSETS_PREFIX: /tiles/basemaps-assets
     ports:
       - "5173:5173"
