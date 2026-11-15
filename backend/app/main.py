@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.v1 import health, magic_links, me_routes, session_routes, trips
+from app.api.v1 import gear, health, magic_links, me_routes, session_routes, trips
 from app.middleware.security import SecurityMiddleware
 from app.startup import validate_runtime_settings
 
@@ -23,3 +23,4 @@ app.include_router(magic_links.router, prefix="/api/v1", tags=["auth"])
 app.include_router(session_routes.router, prefix="/api/v1", tags=["auth"])
 app.include_router(me_routes.router, prefix="/api/v1", tags=["profile"])
 app.include_router(trips.router, prefix="/api/v1", tags=["trips"])
+app.include_router(gear.router, prefix="/api/v1", tags=["gear"])

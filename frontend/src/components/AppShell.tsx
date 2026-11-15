@@ -34,6 +34,9 @@ export function AppShell({ children }: AppShellProps) {
             <Link to="/trips" className="text-muted-foreground hover:text-foreground">
               Trips
             </Link>
+            <Link to="/gear" className="text-muted-foreground hover:text-foreground">
+              Gear
+            </Link>
             <Button
               type="button"
               variant="outline"
