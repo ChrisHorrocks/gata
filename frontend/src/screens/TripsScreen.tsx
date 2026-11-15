@@ -1,20 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
-import { logout } from '@/api/session'
 import { fetchTrips } from '@/api/trips'
+import { AppShell } from '@/components/AppShell'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export function TripsScreen() {
-  const navigate = useNavigate()
   const tripsQuery = useQuery({
     queryKey: ['trips'],
     queryFn: fetchTrips,
   })
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-lg flex-col gap-4 p-6">
+    <AppShell>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2">
           <CardTitle>Your trips</CardTitle>
@@ -54,18 +53,8 @@ export function TripsScreen() {
               ))}
             </ul>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={async () => {
-              await logout()
-              navigate('/sign-in', { replace: true })
-            }}
-          >
-            Sign out
-          </Button>
         </CardContent>
       </Card>
-    </main>
+    </AppShell>
   )
 }

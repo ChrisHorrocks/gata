@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { createTrip } from '@/api/trips'
+import { AppShell } from '@/components/AppShell'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -23,7 +24,7 @@ export function CreateTripScreen() {
   })
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-lg flex-col gap-4 p-6">
+    <AppShell>
       <Card>
         <CardHeader>
           <CardTitle>New trip</CardTitle>
@@ -109,6 +110,6 @@ export function CreateTripScreen() {
           </form>
         </CardContent>
       </Card>
-    </main>
+    </AppShell>
   )
 }

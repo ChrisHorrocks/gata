@@ -139,7 +139,7 @@ def consume_magic_link(db: Session, keyset: KeySet, *, compact: str) -> User:
 
     user = db.scalar(select(User).where(User.email == email))
     if user is None:
-        user = User(email=email, display_name=None, created_at=now)
+        user = User(email=email, display_name=None, emergency_contacts=[], created_at=now)
         db.add(user)
         db.flush()
 
