@@ -1,14 +1,20 @@
 import type { MapConfig } from '@/config/map'
-import { pmtilesAbsoluteUrl } from '@/config/map'
 
-/** Terrarium DEM tiles inside a self-hosted Mapterhorn PMTiles archive (512 px WebP). */
+/** HTTP URL of the self-hosted elevation PMTiles archive (range requests via /tiles). */
+export function elevationPmtilesArchiveUrl(
+  config: MapConfig,
+  origin = 'http://localhost',
+): string {
+  const path = config.elevationPmtilesPath.startsWith('/')
+    ? config.elevationPmtilesPath
+    : `/${config.elevationPmtilesPath}`
+  return new URL(path, origin).href
+}
+
+/** Virtual tile URL pattern for maplibre-contour; tiles are loaded via PMTiles.getZxy, not GET. */
 export function elevationDemTilePattern(
   config: MapConfig,
   origin = 'http://localhost',
 ): string {
-  const base = pmtilesAbsoluteUrl(
-    { ...config, pmtilesPath: config.elevationPmtilesPath },
-    origin,
-  )
-  return `pmtiles://${base}/{z}/{x}/{y}.webp`
+  return `${elevationPmtilesArchiveUrl(config, origin)}/{z}/{x}/{y}.webp`
 }

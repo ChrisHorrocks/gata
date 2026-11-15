@@ -3,7 +3,11 @@ import type { Map as MapLibreMap } from 'maplibre-gl'
 
 import type { MapConfig } from '@/config/map'
 import { CONTOUR_THRESHOLDS } from '@/lib/contourStyle'
-import { elevationDemTilePattern } from '@/lib/elevationDemUrl'
+import { createElevationDemGetTile } from '@/lib/elevationDemGetTile'
+import {
+  elevationDemTilePattern,
+  elevationPmtilesArchiveUrl,
+} from '@/lib/elevationDemUrl'
 
 const DEM_SOURCE_ID = 'gata-elevation-dem'
 const CONTOUR_SOURCE_ID = 'gata-contour-source'
@@ -14,6 +18,7 @@ const CONTOUR_LABELS_LAYER_ID = 'gata-contour-labels'
 const ELEVATION_MAX_ZOOM = 12
 
 type DemSource = InstanceType<typeof mlcontour.DemSource>
+type LocalDemManager = InstanceType<typeof mlcontour.LocalDemManager>
 
 let demSource: DemSource | null = null
 
@@ -23,13 +28,17 @@ export function ensureTerrainProtocols(
   origin: string,
 ): DemSource {
   if (!demSource) {
+    const archiveUrl = elevationPmtilesArchiveUrl(config, origin)
     demSource = new mlcontour.DemSource({
       url: elevationDemTilePattern(config, origin),
       encoding: 'terrarium',
       maxzoom: ELEVATION_MAX_ZOOM,
-      worker: true,
+      // getTile cannot run in maplibre-contour's shared worker (not serializable); PMTiles runs on main thread.
+      worker: false,
       id: 'gata-dem',
     })
+    const manager = demSource.manager as LocalDemManager
+    manager.getTile = createElevationDemGetTile(archiveUrl)
     demSource.setupMaplibre(maplibregl)
   }
   return demSource
@@ -136,4 +145,9 @@ export function applyTerrainLayerVisibility(
   if (map.getLayer(CONTOUR_LABELS_LAYER_ID)) {
     map.setLayoutProperty(CONTOUR_LABELS_LAYER_ID, 'visibility', contourVis)
   }
+}
+
+/** @internal test hook */
+export function resetTerrainDemSourceForTests(): void {
+  demSource = null
 }
