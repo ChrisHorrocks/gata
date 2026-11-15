@@ -78,7 +78,13 @@ def capture_mail(mail_capture: MailCapture) -> Generator[MailCapture, None, None
     app.dependency_overrides[get_mailer] = lambda: mail_capture
     yield mail_capture
     app.dependency_overrides.pop(get_mailer, None)
-    set_mailer(SmtpMailer(host=settings.smtp_host, port=settings.smtp_port))
+    set_mailer(
+        SmtpMailer(
+            host=settings.smtp_host,
+            port=settings.smtp_port,
+            from_addr=str(settings.smtp_from),
+        )
+    )
 
 
 @pytest.fixture

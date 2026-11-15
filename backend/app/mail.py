@@ -35,22 +35,28 @@ class MailCapture:
 class SmtpMailer:
     host: str
     port: int
+    from_addr: str
 
     def send(self, *, to: str, subject: str, body: str) -> None:
-        msg = build_message(to=to, subject=subject, body=body)
+        msg = build_message(from_addr=self.from_addr, to=to, subject=subject, body=body)
         with smtplib.SMTP(self.host, self.port) as smtp:
-            smtp.send_message(msg)
+            smtp.send_message(msg, from_addr=self.from_addr, to_addrs=[to])
 
 
-def build_message(*, to: str, subject: str, body: str) -> EmailMessage:
+def build_message(*, from_addr: str, to: str, subject: str, body: str) -> EmailMessage:
     msg = EmailMessage()
+    msg["From"] = from_addr
     msg["To"] = to
     msg["Subject"] = subject
     msg.set_content(body)
     return msg
 
 
-_mailer: MailSender = SmtpMailer(host=settings.smtp_host, port=settings.smtp_port)
+_mailer: MailSender = SmtpMailer(
+    host=settings.smtp_host,
+    port=settings.smtp_port,
+    from_addr=str(settings.smtp_from),
+)
 
 
 def get_mailer() -> MailSender:
