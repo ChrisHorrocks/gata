@@ -12,16 +12,27 @@ import { ItineraryScreen } from '@/screens/ItineraryScreen'
 vi.mock('@/components/ItineraryMap', () => ({
   ItineraryMap: ({
     onMapClick,
+    pins,
   }: {
     onMapClick: (coords: { latitude: number; longitude: number }) => void
+    pins: Array<{ latitude: number; longitude: number; pin_number: number }>
   }) => (
-    <button
-      type="button"
-      aria-label="Trip map"
-      onClick={() => onMapClick({ latitude: 53.1, longitude: -4.1 })}
-    >
-      Map stub
-    </button>
+    <div>
+      <button
+        type="button"
+        aria-label="Trip map"
+        onClick={() => onMapClick({ latitude: 53.1, longitude: -4.1 })}
+      >
+        Map stub
+      </button>
+      <ul aria-label="Camp pins">
+        {pins.map((pin) => (
+          <li key={pin.pin_number}>
+            Pin {pin.pin_number}: {pin.latitude.toFixed(3)}, {pin.longitude.toFixed(3)}
+          </li>
+        ))}
+      </ul>
+    </div>
   ),
 }))
 
@@ -146,6 +157,45 @@ describe('ItineraryScreen', () => {
       const patch = requests.find((entry) => entry.method === 'PATCH')?.body as { notes: string }
       expect(patch.notes).toBe('Windy col')
     })
+  })
+
+  it('moves a camp when typing a grid reference', async () => {
+    const user = userEvent.setup()
+  const placed = {
+      id: 'camp-1',
+      day_id: 'day-1',
+      name: 'Camp 1',
+      latitude: 53.1,
+      longitude: -4.1,
+      notes: null,
+      version: 1,
+      pin_number: 1,
+    }
+    server.use(
+      http.post('/api/v1/trips/trip-1/camps', async ({ request }) => {
+        const body = (await request.json()) as { latitude: number; longitude: number }
+        const saved = {
+          ...placed,
+          latitude: body.latitude,
+          longitude: body.longitude,
+        }
+        campList.camps = [saved]
+        return HttpResponse.json(saved, { status: 201 })
+      }),
+    )
+
+    renderItinerary()
+    await waitFor(() => {
+      expect(screen.getByLabelText(/grid reference or lat, long/i)).toBeInTheDocument()
+    })
+
+    await user.type(screen.getByLabelText(/grid reference or lat, long/i), 'SH 6000 6500')
+    await user.click(screen.getByRole('button', { name: /set position/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/pin 1: 53\.164/i)).toBeInTheDocument()
+    })
+    expect(screen.getByText(/^SH \d{4} \d{4}$/)).toBeInTheDocument()
   })
 
   it('shows day list, totals, and version conflict reload', async () => {

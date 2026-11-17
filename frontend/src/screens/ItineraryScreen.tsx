@@ -14,6 +14,7 @@ import {
   type DayKind,
   type DayListResponse,
 } from '@/api/days'
+import { CampPositionDisplay } from '@/components/CampPositionDisplay'
 import { ItineraryMap } from '@/components/ItineraryMap'
 import { fetchTrip } from '@/api/trips'
 import { AppShell } from '@/components/AppShell'
@@ -27,6 +28,7 @@ import {
   effectiveCampForDay,
   orderedCampPins,
 } from '@/lib/campItinerary'
+import { parseCampPositionInput } from '@/lib/campPosition'
 import { isVersionConflict } from '@/lib/versionConflict'
 import type { Camp as CampRow } from '@/api/camps'
 
@@ -93,6 +95,11 @@ type DayRowProps = {
   onDeleted: () => void
   onReordered: (list: DayListResponse) => void
   onConflict: (error: unknown) => void
+  campPositionInput: string
+  onCampPositionInputChange: (value: string) => void
+  onApplyCampPosition: () => void
+  campPositionPending: boolean
+  campPositionError: string | null
 }
 
 function DayRow({
@@ -114,6 +121,11 @@ function DayRow({
   onDeleted,
   onReordered,
   onConflict,
+  campPositionInput,
+  onCampPositionInputChange,
+  onApplyCampPosition,
+  campPositionPending,
+  campPositionError,
 }: DayRowProps) {
   const [fieldError, setFieldError] = useState<string | null>(null)
   const [showDelete, setShowDelete] = useState(false)
@@ -202,6 +214,7 @@ function DayRow({
   })
 
   const errorId = fieldError ? `day-${day.id}-error` : undefined
+  const campPositionErrorId = campPositionError ? `day-${day.id}-camp-position-error` : undefined
   const dayLabel = `Day ${index + 1}`
 
   return (
@@ -327,6 +340,12 @@ function DayRow({
             )}
           </div>
 
+          {effectiveCamp && (
+            <div className="rounded-md border border-border/60 bg-muted/20 p-2" onClick={(event) => event.stopPropagation()}>
+              <CampPositionDisplay latitude={effectiveCamp.latitude} longitude={effectiveCamp.longitude} />
+            </div>
+          )}
+
           {selected && (
             <div
               className="space-y-2 rounded-md border border-border bg-card/80 p-3"
@@ -341,6 +360,45 @@ function DayRow({
                     ? `Stays at camp pin ${effectiveCamp.pin_number} (${effectiveCamp.name}).`
                     : 'No camp yet from a previous walking day.'}
               </p>
+              {day.kind === 'walking' && (
+                <>
+                  <label
+                    className="block text-xs text-muted-foreground"
+                    htmlFor={`camp-position-${day.id}`}
+                  >
+                    Grid reference or lat, long
+                  </label>
+                  <div className="flex flex-wrap items-start gap-2">
+                    <input
+                      id={`camp-position-${day.id}`}
+                      type="text"
+                      inputMode="text"
+                      autoComplete="off"
+                      spellCheck={false}
+                      className="min-w-0 flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-sm user-invalid:border-destructive"
+                      value={campPositionInput}
+                      onChange={(event) => onCampPositionInputChange(event.target.value)}
+                      aria-invalid={campPositionError ? true : undefined}
+                      aria-describedby={campPositionErrorId}
+                      placeholder="e.g. TG 5140 1317 or 52.658, 1.716"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={campPositionPending}
+                      onClick={() => onApplyCampPosition()}
+                    >
+                      Set position
+                    </Button>
+                  </div>
+                  {campPositionError && (
+                    <p id={campPositionErrorId} className="text-sm text-destructive" role="alert">
+                      {campPositionError}
+                    </p>
+                  )}
+                </>
+              )}
               {day.kind === 'walking' && effectiveCamp && (
                 <>
                   <label className="block text-xs text-muted-foreground" htmlFor={`camp-notes-${day.id}`}>
@@ -441,6 +499,8 @@ export function ItineraryScreen() {
   const queryClient = useQueryClient()
   const [drafts, setDrafts] = useState<Record<string, RowDraft>>({})
   const [campNoteDrafts, setCampNoteDrafts] = useState<Record<string, string>>({})
+  const [campPositionDrafts, setCampPositionDrafts] = useState<Record<string, string>>({})
+  const [campPositionErrors, setCampPositionErrors] = useState<Record<string, string>>({})
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null)
   const [flyToToken, setFlyToToken] = useState(0)
   const [showConflict, setShowConflict] = useState(false)
@@ -560,6 +620,24 @@ export function ItineraryScreen() {
       }
     },
   })
+
+  const submitCampPosition = (dayId: string, rawInput: string) => {
+    try {
+      const position = parseCampPositionInput(rawInput)
+      setCampPositionErrors((previous) => {
+        const next = { ...previous }
+        delete next[dayId]
+        return next
+      })
+      placeCampMutation.mutate({
+        latitude: position.latitude,
+        longitude: position.longitude,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Invalid position.'
+      setCampPositionErrors((previous) => ({ ...previous, [dayId]: message }))
+    }
+  }
 
   const campNotesMutation = useMutation({
     mutationFn: async ({ camp, notes }: { camp: Camp; notes: string }) =>
@@ -740,6 +818,21 @@ export function ItineraryScreen() {
                       onDeleted={() => clearDraft(day.id)}
                       onReordered={applyList}
                       onConflict={(error) => handleConflict(error, 'itinerary')}
+                      campPositionInput={campPositionDrafts[day.id] ?? ''}
+                      onCampPositionInputChange={(value) => {
+                        setCampPositionDrafts((previous) => ({ ...previous, [day.id]: value }))
+                        setCampPositionErrors((previous) => {
+                          if (!(day.id in previous)) {
+                            return previous
+                          }
+                          const next = { ...previous }
+                          delete next[day.id]
+                          return next
+                        })
+                      }}
+                      onApplyCampPosition={() => submitCampPosition(day.id, campPositionDrafts[day.id] ?? '')}
+                      campPositionPending={placeCampMutation.isPending}
+                      campPositionError={campPositionErrors[day.id] ?? null}
                     />
                   </li>
                 )
