@@ -8,6 +8,8 @@ Expedition planning for small trekking teams. This repo is a monorepo: `frontend
 docker compose up --build
 ```
 
+The frontend bind-mounts source but keeps `node_modules` on a Compose volume so host and container trees do not fight. On start, `frontend/docker-entrypoint.sh` compares `package-lock.json` to a stamp in that volume and runs `npm ci` when the lockfile changed (for example after `git pull`). You no longer need `docker compose down -V` for new dependencies.
+
 | Service   | URL |
 | --------- | --- |
 | SPA       | http://localhost:5173 |
